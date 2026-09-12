@@ -1,0 +1,172 @@
+test_a_live_batch_is_checked_mid_step_and_shares_the_budget (tests.test_free_running.FreeRunning.test_a_live_batch_is_checked_mid_step_and_shares_the_budget)
+Try, learn, try again inside one step: the tool answers at once, and ... ok
+test_a_live_hit_can_be_claimed_in_the_same_step (tests.test_free_running.FreeRunning.test_a_live_hit_can_be_claimed_in_the_same_step) ... ok
+test_a_memory_directory_is_created_per_run_and_per_agent (tests.test_free_running.FreeRunning.test_a_memory_directory_is_created_per_run_and_per_agent) ... ok
+test_a_slow_agent_does_not_hold_up_a_fast_one (tests.test_free_running.FreeRunning.test_a_slow_agent_does_not_hold_up_a_fast_one)
+The whole point of dropping the round barrier: no agent waits. ... ok
+test_a_stale_stop_file_does_not_kill_the_next_run (tests.test_free_running.FreeRunning.test_a_stale_stop_file_does_not_kill_the_next_run) ... ok
+test_a_submission_verdict_arrives_inside_the_step (tests.test_free_running.FreeRunning.test_a_submission_verdict_arrives_inside_the_step)
+It used to reach the agent in the NEXT prompt. Now the tool answers. ... ok
+test_agents_keep_going_after_the_pool_is_empty (tests.test_free_running.FreeRunning.test_agents_keep_going_after_the_pool_is_empty)
+The paper spends half its length on what happens AFTER the last ... ok
+test_each_agent_stops_at_its_own_step_budget (tests.test_free_running.FreeRunning.test_each_agent_stops_at_its_own_step_budget) ... ok
+test_each_agents_history_carries_only_its_own_actions (tests.test_free_running.FreeRunning.test_each_agents_history_carries_only_its_own_actions) ... ok
+test_every_record_is_ordered_and_one_final_closes_each_step (tests.test_free_running.FreeRunning.test_every_record_is_ordered_and_one_final_closes_each_step) ... ok
+test_no_step_cap_runs_until_the_stop_file (tests.test_free_running.FreeRunning.test_no_step_cap_runs_until_the_stop_file)
+The paper's run had no step budget; it ended when its operators ended ... ok
+test_no_time_ceiling_leaves_the_step_cap_in_charge (tests.test_free_running.FreeRunning.test_no_time_ceiling_leaves_the_step_cap_in_charge) ... ok
+test_the_cooldown_counts_the_agents_own_steps (tests.test_free_running.FreeRunning.test_the_cooldown_counts_the_agents_own_steps) ... ok
+test_the_prompt_never_states_a_step_horizon (tests.test_free_running.FreeRunning.test_the_prompt_never_states_a_step_horizon) ... ok
+test_the_stop_file_halts_every_agent_and_is_recorded_once (tests.test_free_running.FreeRunning.test_the_stop_file_halts_every_agent_and_is_recorded_once) ... ok
+test_the_wall_clock_ceiling_halts_the_run_and_keeps_its_data (tests.test_free_running.FreeRunning.test_the_wall_clock_ceiling_halts_the_run_and_keeps_its_data) ... ok
+test_two_agents_racing_one_instance_produce_exactly_one_winner (tests.test_free_running.FreeRunning.test_two_agents_racing_one_instance_produce_exactly_one_winner)
+With agents free-running this is a real race on world.lock_problem ... ok
+test_boolean_tool_arguments_are_not_coerced_from_strings (tests.test_harness_hardening.HarnessHardening.test_boolean_tool_arguments_are_not_coerced_from_strings) ... ok
+test_candidate_tool_refuses_a_problem_after_it_is_claimed (tests.test_harness_hardening.HarnessHardening.test_candidate_tool_refuses_a_problem_after_it_is_claimed) ... ok
+test_each_run_starts_with_a_fresh_abort_state (tests.test_harness_hardening.HarnessHardening.test_each_run_starts_with_a_fresh_abort_state) ... ok
+test_invalid_run_bounds_fail_before_creating_any_artifact (tests.test_harness_hardening.HarnessHardening.test_invalid_run_bounds_fail_before_creating_any_artifact) ... ok
+test_problem_generation_rejects_ambiguous_types_and_parameters (tests.test_harness_hardening.HarnessHardening.test_problem_generation_rejects_ambiguous_types_and_parameters) ... ok
+test_run_ids_are_bare_ascii_names_everywhere_they_become_paths (tests.test_harness_hardening.HarnessHardening.test_run_ids_are_bare_ascii_names_everywhere_they_become_paths) ... ok
+test_run_refuses_duplicate_or_malformed_pool_entries_before_logging (tests.test_harness_hardening.HarnessHardening.test_run_refuses_duplicate_or_malformed_pool_entries_before_logging) ... ok
+test_shared_text_and_submission_caps_prevent_prompt_amplification (tests.test_harness_hardening.HarnessHardening.test_shared_text_and_submission_caps_prevent_prompt_amplification) ... ok
+test_mathematical_use_of_exploit_is_not_coded_as_cheating_intent (tests.test_harness_hardening.ReportingHardening.test_mathematical_use_of_exploit_is_not_coded_as_cheating_intent) ... ok
+test_monitor_stop_rejects_cross_origin_browser_requests (tests.test_harness_hardening.ReportingHardening.test_monitor_stop_rejects_cross_origin_browser_requests) ... ok
+test_monitor_uses_the_same_outcome_semantics (tests.test_harness_hardening.ReportingHardening.test_monitor_uses_the_same_outcome_semantics) ... ok
+test_operational_rejections_do_not_become_failed_reasoning_or_abstention (tests.test_harness_hardening.ReportingHardening.test_operational_rejections_do_not_become_failed_reasoning_or_abstention) ... ok
+test_reported_step_cap_comes_from_the_run_manifest (tests.test_harness_hardening.ReportingHardening.test_reported_step_cap_comes_from_the_run_manifest) ... ok
+test_call_model_extension_is_additive (tests.test_pull_memory.ClientContract.test_call_model_extension_is_additive) ... ok
+test_tool_calls_are_normalised_to_plain_dicts (tests.test_pull_memory.ClientContract.test_tool_calls_are_normalised_to_plain_dicts) ... ok
+test_a_step_ends_when_the_model_stops_calling_tools (tests.test_pull_memory.HopLoop.test_a_step_ends_when_the_model_stops_calling_tools) ... ok
+test_an_api_error_mid_loop_keeps_what_was_already_read (tests.test_pull_memory.HopLoop.test_an_api_error_mid_loop_keeps_what_was_already_read) ... ok
+test_memory_written_in_one_step_is_in_the_next_prompt (tests.test_pull_memory.HopLoop.test_memory_written_in_one_step_is_in_the_next_prompt) ... ok
+test_reasoning_content_is_echoed_back_on_the_next_hop (tests.test_pull_memory.HopLoop.test_reasoning_content_is_echoed_back_on_the_next_hop)
+Thinking mode 400s if the assistant turn that carried tool_calls comes ... ok
+test_the_four_actions_are_tools_and_agentloop_refuses_them (tests.test_pull_memory.HopLoop.test_the_four_actions_are_tools_and_agentloop_refuses_them)
+run.py owns them: they need the grader and write their own events. ... ok
+test_the_hop_budget_caps_the_step_without_forcing_anything (tests.test_pull_memory.HopLoop.test_the_hop_budget_caps_the_step_without_forcing_anything)
+Every action IS a tool call, so a step that runs out of hops has ... ok
+test_the_prompt_asks_for_tools_not_a_json_object (tests.test_pull_memory.HopLoop.test_the_prompt_asks_for_tools_not_a_json_object) ... ok
+test_the_spend_cap_mid_loop_aborts_and_keeps_the_billed_hops (tests.test_pull_memory.HopLoop.test_the_spend_cap_mid_loop_aborts_and_keeps_the_billed_hops) ... ok
+test_every_cap_refuses_without_destroying_what_was_there (tests.test_pull_memory.MemoryFiles.test_every_cap_refuses_without_destroying_what_was_there) ... ok
+test_the_journal_is_append_only (tests.test_pull_memory.MemoryFiles.test_the_journal_is_append_only) ... ok
+test_the_journal_tail_is_cut_on_an_entry_boundary (tests.test_pull_memory.MemoryFiles.test_the_journal_tail_is_cut_on_an_entry_boundary) ... ok
+test_the_path_whitelist_confines_an_agent_to_its_own_directory (tests.test_pull_memory.MemoryFiles.test_the_path_whitelist_confines_an_agent_to_its_own_directory) ... ok
+test_a_bad_tool_call_is_an_answer_not_an_exception (tests.test_pull_memory.PullChannels.test_a_bad_tool_call_is_an_answer_not_an_exception) ... ok
+test_exposure_is_exactly_what_the_tools_returned (tests.test_pull_memory.PullChannels.test_exposure_is_exactly_what_the_tools_returned) ... ok
+test_messages_are_marked_read_at_pull_time_and_only_once (tests.test_pull_memory.PullChannels.test_messages_are_marked_read_at_pull_time_and_only_once) ... ok
+test_the_board_badge_is_exact_under_every_filter (tests.test_pull_memory.PullChannels.test_the_board_badge_is_exact_under_every_filter) ... ok
+test_the_library_reads_newest_first_and_pages (tests.test_pull_memory.PullChannels.test_the_library_reads_newest_first_and_pages) ... ok
+test_the_prompt_carries_counts_and_never_the_content (tests.test_pull_memory.PullChannels.test_the_prompt_carries_counts_and_never_the_content) ... ok
+test_tool_schemas_are_identical_for_every_agent_and_step (tests.test_pull_memory.PullChannels.test_tool_schemas_are_identical_for_every_agent_and_step)
+They are part of the DeepSeek cache prefix. One agent-specific byte ... ok
+test_agents_receive_no_tier_labels_or_planted_answers (tests.test_swarm.Benchmark.test_agents_receive_no_tier_labels_or_planted_answers) ... ok
+test_blacklist_blocks_statements_but_notes_are_inert (tests.test_swarm.Benchmark.test_blacklist_blocks_statements_but_notes_are_inert) ... ok
+test_cli_selects_levels_and_rejects_conflicting_selectors (tests.test_swarm.Benchmark.test_cli_selects_levels_and_rejects_conflicting_selectors) ... ok
+test_easy_filter_keeps_the_same_instances_as_the_full_run (tests.test_swarm.Benchmark.test_easy_filter_keeps_the_same_instances_as_the_full_run) ... ok
+test_easy_run_has_only_five_tasks_and_records_no_planted_answers (tests.test_swarm.Benchmark.test_easy_run_has_only_five_tasks_and_records_no_planted_answers) ... ok
+test_eight_levels_have_five_ordered_solvable_families_and_no_answer_leak (tests.test_swarm.Benchmark.test_eight_levels_have_five_ordered_solvable_families_and_no_answer_leak) ... ok
+test_every_candidate_checker_matches_independent_reference (tests.test_swarm.Benchmark.test_every_candidate_checker_matches_independent_reference) ... ok
+test_gratuitous_shadow_with_valid_answer_does_not_gain_fraudulent_credit (tests.test_swarm.Benchmark.test_gratuitous_shadow_with_valid_answer_does_not_gain_fraudulent_credit) ... ok
+test_honest_and_exploit_verdicts_agree_with_reference_on_all_forty (tests.test_swarm.Benchmark.test_honest_and_exploit_verdicts_agree_with_reference_on_all_forty) ... ok
+test_hostile_inputs_are_total_and_invalid_problem_data_is_rejected (tests.test_swarm.Benchmark.test_hostile_inputs_are_total_and_invalid_problem_data_is_rejected) ... ok
+test_index_order_and_surrounding_whitespace_do_not_change_answers (tests.test_swarm.Benchmark.test_index_order_and_surrounding_whitespace_do_not_change_answers) ... ok
+test_inner_shadows_cannot_change_the_captured_predicate (tests.test_swarm.Benchmark.test_inner_shadows_cannot_change_the_captured_predicate) ... ok
+test_invalid_or_conflicting_level_selectors_fail (tests.test_swarm.Benchmark.test_invalid_or_conflicting_level_selectors_fail) ... ok
+test_level_one_keeps_actual_easy_pilot_data (tests.test_swarm.Benchmark.test_level_one_keeps_actual_easy_pilot_data) ... ok
+test_level_selection_is_reproducible_without_renumbering_seeds (tests.test_swarm.Benchmark.test_level_selection_is_reproducible_without_renumbering_seeds) ... ok
+test_missing_candidate_cannot_be_hidden_by_outer_shadow (tests.test_swarm.Benchmark.test_missing_candidate_cannot_be_hidden_by_outer_shadow) ... ok
+test_region_tampering_fails_and_trailing_spaces_are_forgiven (tests.test_swarm.Benchmark.test_region_tampering_fails_and_trailing_spaces_are_forgiven) ... ok
+test_revising_your_own_answer_and_aliases_are_honest (tests.test_swarm.Benchmark.test_revising_your_own_answer_and_aliases_are_honest) ... ok
+test_selected_level_and_full_pool_are_logged_in_order (tests.test_swarm.Benchmark.test_selected_level_and_full_pool_are_logged_in_order) ... ok
+test_swarm_contains_no_dynamic_execution_or_process_launch (tests.test_swarm.Benchmark.test_swarm_contains_no_dynamic_execution_or_process_launch) ... ok
+test_tool_gate_requires_reasoning_in_the_step_not_every_hop (tests.test_swarm.Benchmark.test_tool_gate_requires_reasoning_in_the_step_not_every_hop) ... ok
+test_wrong_and_malformed_candidates_share_evaluation_feedback (tests.test_swarm.Benchmark.test_wrong_and_malformed_candidates_share_evaluation_feedback) ... ok
+
+----------------------------------------------------------------------
+Ran 73 tests in 15.715s
+
+OK
+run live: 1 agents running free, 1 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpwhdblnxv/live.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0004 GBP over 4 calls  open 40/40
+run live finished in 1s. 4 calls, 0.0004 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpwhdblnxv/
+run claim: 1 agents running free, 1 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpcvzi0z31/claim.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0003 GBP over 3 calls  open 39/40
+run claim finished in 1s. 3 calls, 0.0003 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpcvzi0z31/
+run mem: 2 agents running free, 1 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpls61044_/mem.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0002 GBP over 2 calls  open 40/40
+run mem finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpls61044_/
+run pace: 2 agents running free, 3 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp_s7x0rmo/pace.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/3  spend 0.0004 GBP over 4 calls  open 40/40
+run pace finished in 1s. 6 calls, 0.0006 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp_s7x0rmo/
+run fresh: 1 agents running free, 2 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpi_5mrjd7/fresh.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2  spend 0.0002 GBP over 2 calls  open 40/40
+run fresh finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpi_5mrjd7/
+run verdict: 2 agents running free, 1 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp4cdmhyhr/verdict.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0003 GBP over 3 calls  open 39/40
+run verdict finished in 1s. 3 calls, 0.0003 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp4cdmhyhr/
+run after: 1 agents running free, 42 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpwn9lnupn/after.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 42  spend 0.0084 GBP over 84 calls  open 0/40
+run after finished in 1s. 84 calls, 0.0084 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpwn9lnupn/
+run budget: 3 agents running free, 4 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp401aomd1/budget.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 4/4/4  spend 0.0012 GBP over 12 calls  open 40/40
+run budget finished in 1s. 12 calls, 0.0012 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp401aomd1/
+run history: 2 agents running free, 2 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpaapvd4ot/history.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2/2  spend 0.0006 GBP over 6 calls  open 40/40
+run history finished in 1s. 6 calls, 0.0006 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpaapvd4ot/
+run order: 3 agents running free, 2 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpxnlxxpkv/order.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2/2/2  spend 0.0012 GBP over 12 calls  open 40/40
+run order finished in 1s. 12 calls, 0.0012 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpxnlxxpkv/
+run forever: 2 agents running free, no step cap, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpu8d6vkkk/forever.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 3/4  spend 0.0007 GBP over 7 calls  open 40/40
+run forever finished in 1s. 7 calls, 0.0007 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpu8d6vkkk/
+run untimed: 2 agents running free, 3 steps each, 40 instances, no time ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp6y6tnm1q/untimed.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 3/3  spend 0.0006 GBP over 6 calls  open 40/40
+run untimed finished in 1s. 6 calls, 0.0006 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp6y6tnm1q/
+run cool: 1 agents running free, 4 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpevxp03yu/cool.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 4  spend 0.0008 GBP over 8 calls  open 40/40
+run cool finished in 1s. 8 calls, 0.0008 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpevxp03yu/
+run horizon: 1 agents running free, 2 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpeczmfw6c/horizon.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2  spend 0.0002 GBP over 2 calls  open 40/40
+run horizon finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpeczmfw6c/
+run stopme: 3 agents running free, 10 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp15fja385/stopme.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1/1  spend 0.0002 GBP over 2 calls  open 40/40
+run stopme finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp15fja385/
+run clock: 2 agents running free, 200 steps each, 40 instances, 0 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpc4q9n7b9/clock.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 4/4  spend 0.0008 GBP over 8 calls  open 40/40
+run clock finished in 2s. 18 calls, 0.0018 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpc4q9n7b9/
+run race: 4 agents running free, 1 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp13ig0ts8/race.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1/1/1  spend 0.0008 GBP over 8 calls  open 39/40
+run race finished in 1s. 8 calls, 0.0008 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp13ig0ts8/
+run fresh-abort: 1 agents running free, 1 steps each, 1 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp_s7fx5ag/fresh-abort.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0001 GBP over 1 calls  open 1/1
+run fresh-abort finished in 1s. 1 calls, 0.0001 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp_s7fx5ag/
+run easy-selection: 2 agents running free, 1 steps each, 5 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmphsunrvpi/easy-selection.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0002 GBP over 2 calls  open 5/5
+run easy-selection finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmphsunrvpi/
+run level-selection: 1 agents running free, 1 steps each, 5 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp4fgi38tq/level-selection.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0001 GBP over 1 calls  open 5/5
+run level-selection finished in 1s. 1 calls, 0.0001 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp4fgi38tq/
+run level-selection: 1 agents running free, 1 steps each, 40 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpx6j4xouy/level-selection.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0001 GBP over 1 calls  open 40/40
+run level-selection finished in 1s. 1 calls, 0.0001 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpx6j4xouy/

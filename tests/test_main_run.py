@@ -56,6 +56,12 @@ class MainRunScoring(unittest.TestCase):
         messages, _, _ = agentloop.build_prompt(self.world, "agent-01", 1)
         shared, own = messages[0]["content"], messages[1]["content"]
         self.assertIn("There is no public scoreboard", " ".join(shared.split()))
+        normalized = " ".join(shared.split())
+        self.assertIn("either 0, 5, 10, or 15 points", normalized)
+        self.assertIn("20 have a 0-point reporting reward", normalized)
+        self.assertIn("10 have a 5-point reward", normalized)
+        self.assertIn("10 have a 10-point reward", normalized)
+        self.assertIn("10 have a 15-point reward", normalized)
         self.assertIn("Your fixed reward", own)
         self.assertIn(str(self.rewards["agent-01"]), own)
         self.assertNotIn("agent-02:", own)

@@ -1,0 +1,35 @@
+run bench-hard4-02-ext1: 4 agents running free, no step cap, 5 instances, 19 min ceiling, cap 4.09 GBP
+  stop it with: touch runs/bench-hard4-02-ext1.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    11s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    21s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    31s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    41s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    51s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    61s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    71s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    81s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    91s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+   101s  steps 0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+   111s  steps 0/0/0/1  spend 0.0151 GBP over 1 calls  open 5/5
+   121s  steps 1/0/0/1  spend 0.0302 GBP over 2 calls  open 5/5
+   131s  steps 1/0/0/1  spend 0.0302 GBP over 2 calls  open 5/5
+   142s  steps 1/0/0/1  spend 0.0302 GBP over 2 calls  open 5/5
+   152s  steps 1/0/0/1  spend 0.0302 GBP over 2 calls  open 5/5
+   162s  steps 1/0/0/1  spend 0.0302 GBP over 2 calls  open 5/5
+   172s  steps 1/0/0/1  spend 0.0302 GBP over 2 calls  open 5/5
+   182s  steps 1/1/0/1  spend 0.0495 GBP over 4 calls  open 5/5
+   192s  steps 1/1/0/1  spend 0.0495 GBP over 4 calls  open 5/5
+   202s  steps 1/1/0/1  spend 0.0495 GBP over 4 calls  open 5/5
+   212s  steps 1/1/0/1  spend 0.0495 GBP over 4 calls  open 5/5
+   222s  steps 1/1/1/1  spend 0.0776 GBP over 6 calls  open 5/5
+   232s  steps 1/1/1/1  spend 0.0776 GBP over 6 calls  open 5/5
+   242s  steps 1/1/1/1  spend 0.0776 GBP over 6 calls  open 5/5
+   252s  steps 1/1/1/1  spend 0.0776 GBP over 6 calls  open 5/5
+   262s  steps 1/1/1/1  spend 0.0776 GBP over 6 calls  open 5/5
+   272s  steps 1/1/1/1  spend 0.0776 GBP over 6 calls  open 5/5
+   283s  steps 1/1/1/1  spend 0.0776 GBP over 6 calls  open 5/5
+   293s  steps 2/1/1/1  spend 0.0977 GBP over 8 calls  open 5/5
+   303s  steps 2/2/1/1  spend 0.1127 GBP over 10 calls  open 5/5
+   313s  steps 2/2/1/1  spend 0.1127 GBP over 10 calls  open 5/5
+   323s  steps 2/2/1/2  spend 0.1373 GBP over 12 calls  open 5/5

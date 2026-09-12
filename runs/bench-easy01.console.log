@@ -1,0 +1,28 @@
+run bench-easy01: 5 agents running free, 6 steps each, 5 instances, 20 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/bench-easy01.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    11s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    21s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    31s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    41s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    51s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    61s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    71s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    81s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+    91s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+   101s  steps 0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 5/5
+   111s  steps 0/1/0/1/0  spend 0.0296 GBP over 2 calls  open 5/5
+   121s  steps 0/1/1/1/0  spend 0.0444 GBP over 3 calls  open 1/5
+   131s  steps 0/1/1/1/0  spend 0.0444 GBP over 3 calls  open 1/5
+   142s  steps 0/1/1/1/0  spend 0.0444 GBP over 3 calls  open 1/5
+   152s  steps 0/1/1/1/0  spend 0.0444 GBP over 3 calls  open 1/5
+   162s  steps 0/1/2/1/0  spend 0.0498 GBP over 8 calls  open 0/5
+   172s  steps 0/1/4/1/0  spend 0.0506 GBP over 12 calls  open 0/5
+   182s  steps 0/1/6/1/1  spend 0.0745 GBP over 21 calls  open 0/5
+   192s  steps 0/1/6/1/1  spend 0.0745 GBP over 21 calls  open 0/5
+   202s  steps 2/1/6/1/4  spend 0.1026 GBP over 34 calls  open 0/5
+   212s  steps 4/1/6/1/5  spend 0.1048 GBP over 43 calls  open 0/5
+   222s  steps 5/2/6/3/6  spend 0.1365 GBP over 58 calls  open 0/5
+   232s  steps 6/3/6/4/6  spend 0.1392 GBP over 67 calls  open 0/5
+   242s  steps 6/5/6/5/6  spend 0.1416 GBP over 77 calls  open 0/5
+run bench-easy01 finished in 246s. 84 calls, 0.1436 GBP. logs in runs/

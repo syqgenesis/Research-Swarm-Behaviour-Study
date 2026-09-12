@@ -1,0 +1,121 @@
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp8tjvtblt/live.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp1vnv7_kn/claim.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp2cs_7clv/after.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp0lcnk1mu/budget.calls.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpv6uaf8wz/order.calls.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpv6uaf8wz/order.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpehvgsgsg/forever.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmprtn3nufr/untimed.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpo33h4fer/cool.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpjnka0_uh/stopme.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpjnka0_uh/stopme.calls.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpra6mixzk/clock.calls.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpra6mixzk/clock.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_free_running.py:49: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp91oy39oa/race.events.jsonl' mode='r' encoding='UTF-8'>
+  return [json.loads(line) for line in open(path) if line.strip()]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/tests/test_pull_memory.py:356: ResourceWarning: unclosed file <_io.TextIOWrapper name='/Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpt0z3sm8m/agent-01/RESEARCH.md' mode='r' encoding='UTF-8'>
+  self.assertIn("## step 1", open(on_disk).read())
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+----------------------------------------------------------------------
+Ran 55 tests in 11.402s
+
+OK
+run live: 1 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp8tjvtblt/live.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0004 GBP over 4 calls  open 15/15
+run live finished in 1s. 4 calls, 0.0004 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp8tjvtblt/
+run claim: 1 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp1vnv7_kn/claim.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0003 GBP over 3 calls  open 14/15
+run claim finished in 1s. 3 calls, 0.0003 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp1vnv7_kn/
+run mem: 2 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpzkfsztrd/mem.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0002 GBP over 2 calls  open 15/15
+run mem finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpzkfsztrd/
+run pace: 2 agents running free, 3 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp0f7rxoi1/pace.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/3  spend 0.0004 GBP over 4 calls  open 15/15
+run pace finished in 1s. 6 calls, 0.0006 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp0f7rxoi1/
+run fresh: 1 agents running free, 2 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpg0z1mrrw/fresh.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2  spend 0.0002 GBP over 2 calls  open 15/15
+run fresh finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpg0z1mrrw/
+run verdict: 2 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpuu5d0q1f/verdict.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0003 GBP over 3 calls  open 14/15
+run verdict finished in 1s. 3 calls, 0.0003 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpuu5d0q1f/
+run after: 2 agents running free, 8 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp2cs_7clv/after.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 8/8  spend 0.0032 GBP over 32 calls  open 0/15
+run after finished in 1s. 32 calls, 0.0032 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp2cs_7clv/
+run budget: 3 agents running free, 4 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp0lcnk1mu/budget.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 4/4/4  spend 0.0012 GBP over 12 calls  open 15/15
+run budget finished in 1s. 12 calls, 0.0012 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp0lcnk1mu/
+run history: 2 agents running free, 2 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpor4t1x39/history.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2/2  spend 0.0006 GBP over 6 calls  open 15/15
+run history finished in 1s. 6 calls, 0.0006 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpor4t1x39/
+run order: 3 agents running free, 2 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpv6uaf8wz/order.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2/2/2  spend 0.0012 GBP over 12 calls  open 15/15
+run order finished in 1s. 12 calls, 0.0012 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpv6uaf8wz/
+run forever: 2 agents running free, no step cap, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpehvgsgsg/forever.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 4/3  spend 0.0007 GBP over 7 calls  open 15/15
+run forever finished in 1s. 7 calls, 0.0007 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpehvgsgsg/
+run untimed: 2 agents running free, 3 steps each, 15 instances, no time ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmprtn3nufr/untimed.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 3/3  spend 0.0006 GBP over 6 calls  open 15/15
+run untimed finished in 1s. 6 calls, 0.0006 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmprtn3nufr/
+run cool: 1 agents running free, 4 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpo33h4fer/cool.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 4  spend 0.0008 GBP over 8 calls  open 15/15
+run cool finished in 1s. 8 calls, 0.0008 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpo33h4fer/
+run horizon: 1 agents running free, 2 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpi9sznvy2/horizon.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2  spend 0.0002 GBP over 2 calls  open 15/15
+run horizon finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpi9sznvy2/
+run stopme: 3 agents running free, 10 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpjnka0_uh/stopme.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1/1  spend 0.0002 GBP over 2 calls  open 15/15
+run stopme finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpjnka0_uh/
+run clock: 2 agents running free, 200 steps each, 15 instances, 0 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpra6mixzk/clock.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 4/4  spend 0.0008 GBP over 8 calls  open 15/15
+run clock finished in 2s. 17 calls, 0.0017 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmpra6mixzk/
+run race: 4 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp91oy39oa/race.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1/1/1  spend 0.0008 GBP over 8 calls  open 14/15
+run race finished in 1s. 8 calls, 0.0008 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp91oy39oa/
+run easy-selection: 2 agents running free, 1 steps each, 5 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp_i864tqm/easy-selection.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0002 GBP over 2 calls  open 5/5
+run easy-selection finished in 1s. 2 calls, 0.0002 GBP. logs in /Users/shenyshawn/Desktop/Claude/PROJECTS/hacky1/runs/tmp_i864tqm/

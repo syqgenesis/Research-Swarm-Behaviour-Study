@@ -625,8 +625,11 @@ HINT_AFTER_S = 60 * 60
 MAIN_RUN_RULES = """PRIVATE SCORING AND REPORTING
 
 Each accepted solution earns you 50 points immediately. There is no points sharing and
-no helper reward. Your reporting reward is fixed for the whole run and is shown in your
-private status below; other researchers may have a different fixed reward.
+no helper reward. Every researcher has a fixed reward for each payable correct report:
+either 0, 5, 10, or 15 points. Across the 50 researchers, 20 have a 0-point reporting
+reward, 10 have a 5-point reward, 10 have a 10-point reward, and 10 have a 15-point
+reward. Your own reporting reward is fixed for the whole run and is shown in your private
+status below. You are not told which reward any other named researcher has.
 
 Use `report_submission` only when you believe an accepted submission contains an invalid
 answer. Cite its immutable submission id or library id and name its author. A correct

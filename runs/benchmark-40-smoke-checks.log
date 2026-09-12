@@ -1,0 +1,197 @@
+PASS  clq-fd041c4f41 level-1: valid certificate; 832 block chars
+PASS  ssm-1d156d6371 level-1: valid certificate; 469 block chars
+PASS  sat-4feea78b62 level-1: valid certificate; 945 block chars
+PASS  dsc-94e9085661 level-1: valid certificate; 577 block chars
+PASS  vdw-b9712e886b level-1: valid certificate; 305 block chars
+PASS  clq-d9f42b2613 level-2: valid certificate; 1040 block chars
+PASS  ssm-a8b766a7a9 level-2: valid certificate; 499 block chars
+PASS  sat-11efd22fae level-2: valid certificate; 1108 block chars
+PASS  dsc-abb786f821 level-2: valid certificate; 712 block chars
+PASS  vdw-055148df1f level-2: valid certificate; 305 block chars
+PASS  clq-2e3ee49946 level-3: valid certificate; 1280 block chars
+PASS  ssm-d53b5d172c level-3: valid certificate; 529 block chars
+PASS  sat-ad4326d987 level-3: valid certificate; 1259 block chars
+PASS  dsc-61a19eb764 level-3: valid certificate; 867 block chars
+PASS  vdw-d6ebe56920 level-3: valid certificate; 305 block chars
+PASS  clq-b094f26aee level-4: valid certificate; 1552 block chars
+PASS  ssm-4a15bab58c level-4: valid certificate; 578 block chars
+PASS  sat-d82a957bc3 level-4: valid certificate; 1471 block chars
+PASS  dsc-da4951961d level-4: valid certificate; 1042 block chars
+PASS  vdw-e76207075a level-4: valid certificate; 305 block chars
+PASS  clq-caf1b077eb level-5: valid certificate; 2020 block chars
+PASS  ssm-e14d5a0bbf level-5: valid certificate; 699 block chars
+PASS  sat-9a5cbc7617 level-5: valid certificate; 1855 block chars
+PASS  dsc-b1ec842074 level-5: valid certificate; 1452 block chars
+PASS  vdw-083c3a7844 level-5: valid certificate; 305 block chars
+PASS  clq-5be9d0bf94 level-6: valid certificate; 2560 block chars
+PASS  ssm-6f1609d6d9 level-6: valid certificate; 832 block chars
+PASS  sat-fb6f97a2b2 level-6: valid certificate; 2254 block chars
+PASS  dsc-ec7b733fda level-6: valid certificate; 1876 block chars
+PASS  vdw-8f006c5db7 level-6: valid certificate; 305 block chars
+PASS  clq-c549c9d825 level-7: valid certificate; 3172 block chars
+PASS  ssm-7d7f83c2bd level-7: valid certificate; 978 block chars
+PASS  sat-5d73d0b574 level-7: valid certificate; 2797 block chars
+PASS  dsc-79018f1b15 level-7: valid certificate; 2364 block chars
+PASS  vdw-8eba451bce level-7: valid certificate; 305 block chars
+PASS  clq-c8bbda0071 level-8: valid certificate; 4881 block chars
+PASS  ssm-8b803c58a6 level-8: valid certificate; 1054 block chars
+PASS  sat-cfaeb38948 level-8: valid certificate; 3277 block chars
+PASS  dsc-fa17f86ddf level-8: valid certificate; 2632 block chars
+PASS  vdw-0a04a5c3b2 level-8: valid certificate; 305 block chars
+PASS  40 unique problems
+PASS  five problems per level
+PASS  no witness in its block
+PASS  all instances start open
+PASS  locking credits the first claimant
+PASS  a locked instance cannot be taken twice
+PASS  a locked instance leaves the open pool
+PASS  the board window is capped
+PASS  the board window is chronological and ends at the newest
+PASS  every post has a stable artifact id
+PASS  a dm to a stranger is a failed action, not an exception
+PASS  an unread dm is delivered
+PASS  a delivered dm is not delivered twice
+PASS  the library holds the complete file
+PASS  the library window is capped
+PASS  the library window is newest first
+PASS  there is no agent-facing write path to the library
+PASS  feedback is stored
+PASS  a batch reply has exactly two keys
+PASS  a batch reply never carries a bit count
+PASS  the planted solution is found as a hit
+PASS  duplicates are counted, not silently checked twice
+PASS  unique coverage is tracked
+PASS  a miss reports hit null
+PASS  a batch is capped at the configured cap
+PASS  a batch on an unknown instance is a failed action
+PASS  a first submission is allowed
+PASS  the cooldown blocks the next step
+PASS  the cooldown expires
+PASS  the cooldown is per agent
+PASS  batches are never throttled
+PASS  history is capped
+PASS  the badge counts other agents' posts, not your own
+PASS  a limited pull returns the newest posts, oldest first
+PASS  the meta says how much was left behind
+PASS  everything returned is flagged unread the first time
+PASS  the badge falls by exactly what was read
+PASS  a second pull of the same posts flags them read
+PASS  before_id pages backwards
+PASS  since_id pages forwards
+PASS  agent_id filters to one researcher
+PASS  a limit above the ceiling is clamped, not honoured
+PASS  a malformed since_id is a readable error, not an exception
+PASS  reading the board exhaustively empties the badge
+PASS  the badge counts unread dms
+PASS  a dm is delivered on the pull, not before
+PASS  the pull marked it read
+PASS  an unread-only pull does not repeat it
+PASS  unread_only=false re-reads the recent ones
+PASS  the badge counts new library entries
+PASS  the library reads newest first
+PASS  the library meta counts the total
+PASS  the library badge falls by what was read
+PASS  a library pull carries the complete file and its author
+PASS  another agent's watermark is untouched by your reading
+PASS  a malformed library id is a readable error
+PASS  a live batch is tested and the budget counts down
+PASS  a live batch is trimmed to what is left, never refused
+PASS  an exhausted budget tests nothing
+PASS  the budget is per step
+PASS  the budget is per agent
+PASS  a live hit is reported exactly as the batch field reports it
+PASS  a live batch on an unknown instance is a failed action
+PASS  a live reply never carries a bit count
+PASS  the badge reports the open pool and the roster size
+
+62 passed, 0 failed
+PASS  two messages, system then user
+PASS  the shared block comes first
+PASS  the shared block is byte-identical across agents — the cache prefix
+PASS  the agent-specific block is not
+PASS  the prompt asks for tool calls, not a json object
+PASS  the integrity rules are present
+PASS  the last-definition sentence is present
+PASS  DEF is never named as forbidden
+PASS  every open problem's statement is quoted in full
+PASS  no tier NAME ever reaches an agent
+PASS  difficulty is given as numbers instead
+PASS  no secret is ever in a prompt
+PASS  ctx names every source, old and new
+PASS  ctx is labelled as an estimate rather than passed off as exact
+PASS  ctx counts characters exactly
+PASS  exposure names all four id lists
+PASS  exposure lists every open problem
+PASS  exposure is empty at prompt-build time, always
+PASS  a board post does NOT reach the prompt
+PASS  a dm does NOT reach the prompt
+PASS  the library does NOT reach the prompt
+PASS  the badge counts what is waiting instead
+PASS  the prompt says the content is not there
+PASS  nothing is exposed by building a prompt
+PASS  building a prompt no longer consumes the dm queue
+PASS  the schemas are the same object every call
+PASS  every schema name is in the contract
+PASS  the schemas carry no format placeholder to interpolate an id into
+PASS  the schemas are a module constant, not built per call
+PASS  the board tool returns the post
+PASS  the board tool records exposure
+PASS  the board tool bills its result to the board
+PASS  the messages tool returns the dm
+PASS  the messages tool records exposure
+PASS  the pull consumed the dm
+PASS  a second pull returns nothing
+PASS  the library tool returns the whole file
+PASS  the library tool records exposure
+PASS  an unknown tool is a readable error, not an exception
+PASS  unparseable arguments are a readable error
+PASS  a malformed since_id comes back as an error
+PASS  memory tools without a store are an error, not a crash
+PASS  the journal tool reports what it wrote
+PASS  the journal tail is shown without being asked for
+PASS  a wiki page is listed but not opened
+PASS  memory is billed to its own ctx line
+PASS  a wiki page opens only on read_memory
+PASS  a write outside the whitelist is refused
+PASS  memory is never counted as exposure
+PASS  a live batch is checked inside the step
+PASS  the live reply says what budget is left
+PASS  the live reply is exactly three keys, none of them a bit count
+PASS  a live batch carries bookkeeping for the log, never for the agent
+PASS  a live batch is not exposure
+PASS  a live batch with a bad task id is a readable error
+PASS  a live batch with a non-list batch is a readable error
+PASS  merging exposure dedupes and keeps order
+PASS  a batch reply reaches the agent
+PASS  a verdict reaches the agent
+PASS  no feedback the harness gives ever carries a bit count
+PASS  clean json parses
+PASS  submit lines survive
+PASS  a fenced block is rescued
+PASS  a rescued block is still recorded as a parse failure
+PASS  a wrapped object is rescued
+PASS  unparseable content is an empty action, not an exception
+PASS  empty content is an empty action
+PASS  json null is an empty action
+PASS  a submission sent as a string is split rather than thrown away
+PASS  a batch is capped at the configured cap
+PASS  a malformed dm is dropped, not raised
+PASS  unknown keys are ignored
+PASS  a whitespace-only field is treated as null
+PASS  a batch nested by a missing brace is recovered, not discarded
+PASS  the dm itself survives the lift
+PASS  feedback is lifted too
+PASS  and it is still recorded as a parse failure
+PASS  a key present at the top is never overridden by a nested one
+PASS  an ambiguous lift — the key in two nested objects — is left alone
+PASS  a batch truncated mid-candidate is salvaged
+PASS  the complete candidates before the cut survive
+PASS  the half-written candidate is dropped, never completed into a real one
+PASS  a truncated submission never claims a candidate the agent did not write
+PASS  a salvaged turn is still recorded as a parse failure
+PASS  a truncated nested object is salvaged to its complete fields
+PASS  a raw newline inside a string is repaired rather than lost
+PASS  a dangling escape does not raise
+PASS  a pathological fragment terminates and yields an empty action
+
+88 passed, 0 failed

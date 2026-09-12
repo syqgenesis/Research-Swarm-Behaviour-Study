@@ -1,0 +1,90 @@
+PASS  two messages, system then user
+PASS  the shared block comes first
+PASS  the shared block is byte-identical across agents — the cache prefix
+PASS  the agent-specific block is not
+PASS  the prompt asks for tool calls, not a json object
+PASS  the integrity rules are present
+PASS  the last-definition sentence is present
+PASS  DEF is never named as forbidden
+PASS  every open problem's statement is quoted in full
+PASS  no tier NAME ever reaches an agent
+PASS  difficulty is given as numbers instead
+PASS  no secret is ever in a prompt
+PASS  ctx names every source, old and new
+PASS  ctx is labelled as an estimate rather than passed off as exact
+PASS  ctx counts characters exactly
+PASS  exposure names all four id lists
+PASS  exposure lists every open problem
+PASS  exposure is empty at prompt-build time, always
+PASS  a board post does NOT reach the prompt
+PASS  a dm does NOT reach the prompt
+PASS  the library does NOT reach the prompt
+PASS  the badge counts what is waiting instead
+PASS  the prompt says the content is not there
+PASS  nothing is exposed by building a prompt
+PASS  building a prompt no longer consumes the dm queue
+PASS  the schemas are the same object every call
+PASS  every schema name is in the contract
+PASS  the schemas carry no format placeholder to interpolate an id into
+PASS  the schemas are a module constant, not built per call
+PASS  the board tool returns the post
+PASS  the board tool records exposure
+PASS  the board tool bills its result to the board
+PASS  the messages tool returns the dm
+PASS  the messages tool records exposure
+PASS  the pull consumed the dm
+PASS  a second pull returns nothing
+PASS  the library tool returns the whole file
+PASS  the library tool records exposure
+PASS  an unknown tool is a readable error, not an exception
+PASS  unparseable arguments are a readable error
+PASS  a malformed since_id comes back as an error
+PASS  memory tools without a store are an error, not a crash
+PASS  the journal tool reports what it wrote
+PASS  the journal tail is shown without being asked for
+PASS  a wiki page is listed but not opened
+PASS  memory is billed to its own ctx line
+PASS  a wiki page opens only on read_memory
+PASS  a write outside the whitelist is refused
+PASS  memory is never counted as exposure
+PASS  a live batch is checked inside the step
+PASS  the live reply says what budget is left
+PASS  the live reply is exactly three keys, none of them a bit count
+PASS  a live batch carries bookkeeping for the log, never for the agent
+PASS  a live batch is not exposure
+PASS  a live batch with a bad task id is a readable error
+PASS  a live batch with a non-list batch is a readable error
+PASS  merging exposure dedupes and keeps order
+PASS  a batch reply reaches the agent
+PASS  a verdict reaches the agent
+PASS  no feedback the harness gives ever carries a bit count
+PASS  clean json parses
+PASS  submit lines survive
+PASS  a fenced block is rescued
+PASS  a rescued block is still recorded as a parse failure
+PASS  a wrapped object is rescued
+PASS  unparseable content is an empty action, not an exception
+PASS  empty content is an empty action
+PASS  json null is an empty action
+PASS  a submission sent as a string is split rather than thrown away
+PASS  a batch is capped at the configured cap
+PASS  a malformed dm is dropped, not raised
+PASS  unknown keys are ignored
+PASS  a whitespace-only field is treated as null
+PASS  a batch nested by a missing brace is recovered, not discarded
+PASS  the dm itself survives the lift
+PASS  feedback is lifted too
+PASS  and it is still recorded as a parse failure
+PASS  a key present at the top is never overridden by a nested one
+PASS  an ambiguous lift — the key in two nested objects — is left alone
+PASS  a batch truncated mid-candidate is salvaged
+PASS  the complete candidates before the cut survive
+PASS  the half-written candidate is dropped, never completed into a real one
+PASS  a truncated submission never claims a candidate the agent did not write
+PASS  a salvaged turn is still recorded as a parse failure
+PASS  a truncated nested object is salvaged to its complete fields
+PASS  a raw newline inside a string is repaired rather than lost
+PASS  a dangling escape does not raise
+PASS  a pathological fragment terminates and yields an empty action
+
+88 passed, 0 failed
