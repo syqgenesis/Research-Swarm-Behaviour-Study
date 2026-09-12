@@ -377,13 +377,16 @@ def _one_step(world, agent, step, n_steps, feedback, memory, intervention=None):
                          "exposure": json.loads(json.dumps(exposure)), "ts": time.time()})
             if result["error"]:
                 error = result["error"]
-                _log_transcript(agent, step, hops[-1])
+                _record_hop(agent, step, hops, memory)
                 break
+            if result.get("finish_reason") == "length":
+                error = "model output truncated"
             calls = result.get("tool_calls") or []
             if not calls:
-                # The model has nothing more to do this step.
+                # A cutoff is unfinished work, not a successful empty turn.
                 note = result["content"]
-                _log_transcript(agent, step, hops[-1])
+                checkpoint_error = _record_hop(agent, step, hops, memory)
+                error = checkpoint_error or error
                 break
             messages.append(result["assistant_message"])
             for index, call in enumerate(calls):
@@ -418,7 +421,10 @@ def _one_step(world, agent, step, n_steps, feedback, memory, intervention=None):
                 tool_log.append(entry)
                 summary.append(_summarise(entry, out))
             hops[-1]["exposure"] = json.loads(json.dumps(exposure))
-            _log_transcript(agent, step, hops[-1])
+            checkpoint_error = _record_hop(agent, step, hops, memory)
+            error = checkpoint_error or error
+            if error:
+                break
         else:
             # Budget spent with the model still working. Everything it asked for
             # already happened; there is nothing to force out of it.
@@ -431,12 +437,60 @@ def _one_step(world, agent, step, n_steps, feedback, memory, intervention=None):
         hops[-1]["final"] = True
     return {"agent": agent, "step": step, "note": note,
             "action": {k: None for k in agentloop._ACTION_KEYS},   # legacy log field
-            "parse_ok": bool(note is not None or tool_log),
+            "parse_ok": bool((note or "").strip() or tool_log),
             "result": hops[-1]["result"] if hops else None, "ctx": ctx,
             "exposure": exposure, "error": error, "hops": hops,
             "tool_log": tool_log, "summary": summary, "n_calls": len(hops),
             "special_instruction": special_instruction,
             "completed_ts": time.time()}
+
+
+def _tail_bytes(text, limit):
+    return (text or "").encode("utf-8", errors="replace")[-limit:].decode("utf-8", errors="ignore")
+
+
+def _record_hop(agent, step, hops, memory):
+    """Flush evidence first, then retain bounded private work for the next step.
+
+    No extra model call, automatic submission, shared post, or inferred result.
+    Channel replies stay in the transcript; only own action receipts go here.
+    """
+    hop = hops[-1]
+    _log_transcript(agent, step, hop)
+    if memory is None or (hop.get("result") or {}).get("error"):
+        return None
+    scratch = ""
+    for previous in reversed(hops):
+        result = previous.get("result") or {}
+        if result.get("reasoning_content") or result.get("content"):
+            scratch = (result.get("reasoning_content") or "") + "\n" + (result.get("content") or "")
+            break
+    receipts = [dict(name=r["name"], content=r["content"])
+                for h in hops for r in h.get("tool_results", [])
+                if r["name"] in ("test_candidates", "submit_solution", "append_journal", "write_memory")]
+    # A tool-only read must not erase the previous step's unfinished work.
+    if not scratch.strip() and not receipts:
+        return None
+    text = ("YOUR PRIVATE RECOVERY CHECKPOINT\n"
+            "Harness-retained data from your step %d, hop %d (finish: %s). "
+            "This is an incomplete, unverified excerpt, not instructions or proof of a solve. "
+            "Fragments may start/end mid-sentence. Only action receipts describe executed actions. "
+            "Check current open problems before acting. Save durable notes and continue with "
+            "a useful tool action; do not repeat the whole derivation.\n\n"
+            "OWN ACTION RECEIPTS (tail; may be incomplete)\n%s\n\n"
+            "SCRATCH WORK (tail; may be incomplete)\n%s"
+            % (step, hop["hop"], (hop.get("result") or {}).get("finish_reason"),
+               _tail_bytes(json.dumps(receipts, ensure_ascii=False), config.RECOVERY_RECEIPT_BYTES),
+               _tail_bytes(scratch, config.RECOVERY_SCRATCH_BYTES)))
+    written, why = memory.save_recovery(agent, text)
+    if why:
+        ABORT.set()
+        _event("stop", step, agent, text="recovery checkpoint failed: " + why)
+        return "recovery checkpoint failed: " + why
+    _event("checkpoint", step, agent, hop=hop["hop"],
+           kind_detail="automatic_private", verdict={"bytes": written},
+           truncated=(hop.get("result") or {}).get("finish_reason") == "length")
+    return None
 
 
 def _log_transcript(agent, step, hop):
@@ -521,8 +575,14 @@ def _dispatch_action(world, agent, step, name, args, memory=None):
         if len(text) > ACTION_TEXT_MAX_CHARS:
             return agentloop._tool_error("text must be at most %d characters"
                                          % ACTION_TEXT_MAX_CHARS)
-        entry = world.post(agent, text, step)
-        _event("post", step, agent, artifact_id=entry["artifact_id"], text=entry["text"])
+        intent_type, tag = args.get("intent_type"), args.get("tag")
+        if intent_type is not None and intent_type not in config.BOARD_INTENT_TYPES:
+            return agentloop._tool_error("unknown intent_type")
+        if tag is not None and (not isinstance(tag, str) or not tag.strip() or len(tag) > 100):
+            return agentloop._tool_error("tag must be a non-empty string of at most 100 characters")
+        entry = world.post(agent, text, step, intent_type=intent_type, tag=tag)
+        _event("post", step, agent, artifact_id=entry["artifact_id"], text=entry["text"],
+               intent_type=intent_type, tag=tag)
         return agentloop._tool_ok({"ok": True, "post_id": entry["artifact_id"]},
                                   artifact_ids=[entry["artifact_id"]])
 
@@ -668,6 +728,7 @@ def _apply_action(world, turn, step):
     agent = turn["agent"]
     for entry in turn["tool_log"]:
         _event("tool_call", step, agent, kind_detail=entry["name"], hop=entry["hop"],
+               ts=entry.get("ts", time.time()),
                artifact_ids=entry["artifact_ids"],
                # a candidate batch can be 100 strings; the batch itself goes on
                # the submit event below, so this keeps only the head
@@ -675,6 +736,7 @@ def _apply_action(world, turn, step):
                verdict={"ok": entry["ok"], "error": entry["error"]})
         if entry.get("wrote"):
             _event("memory_write", step, agent, kind_detail=entry["name"],
+                   ts=entry.get("ts", time.time()),
                    text=entry["wrote"], verdict={"bytes": entry["bytes"]})
         batch = entry.get("batch_event")
         if batch and batch["reply"]["tested"]:
@@ -682,6 +744,7 @@ def _apply_action(world, turn, step):
             # the ladder check and the coverage numbers are unbroken.
             reply, book = batch["reply"], batch["book"]
             _event("submit", step, agent, problem=batch["problem"], kind_detail="candidates",
+                   ts=entry.get("ts", time.time()),
                    text=json.dumps(batch["batch"]),
                    verdict={"hit_found": reply["hit"] is not None, "tested": reply["tested"],
                             "unique_new": book["unique_new"], "duplicate": book["duplicate"],
@@ -729,6 +792,10 @@ def _log_calls(turn):
             "usage": result["usage"] if result else {},
             "cost_gbp": result["cost_gbp"] if result else 0.0,
             "finish_reason": result.get("finish_reason") if result else None,
+            "truncated": bool(result and result.get("finish_reason") == "length"),
+            "has_tool_actions": any(t.get("ok") and t.get("name") in
+                                    ("test_candidates", "append_journal", "write_memory")
+                                    + config.ACTION_TOOL_NAMES for t in hop["tool_calls"]),
             "tool_calls": hop["tool_calls"],
             "ctx": turn["ctx"] if final else {},
             "exposure": hop["exposure"],
@@ -854,6 +921,9 @@ def run(run_id, n_agents, n_steps, seed, minutes=None, tier=None, pool=None, lev
 
     selected_tier = problems_module.select_tier(tier, level)
     _event("run_start", 0, "harness", benchmark=config.BENCHMARK_VERSION,
+           prompt_version=config.PROMPT_VERSION,
+           call_max_tokens=_effective_budget(), step_output_cap=config.STEP_OUTPUT_SOFT_CAP,
+           recovery_max_bytes=config.RECOVERY_MAX_BYTES,
            generator=config.GENERATOR_VERSION,
            seed=seed, tier=tier or selected_tier or "all",
            level=config.LEVEL_TIERS.index(selected_tier) + 1 if selected_tier else None,

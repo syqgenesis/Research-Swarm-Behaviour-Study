@@ -94,7 +94,7 @@ EVENT_KINDS = ("post", "dm", "submit", "accept", "reject",
                # Added 2026-09-12 with the FREE-RUNNING + PULL + MEMORY section
                # at the foot of this file. The eight above are unchanged.
                "tool_call", "memory_write", "stop", "run_start",
-               "report", "score", "intervention", "run_end")
+               "report", "score", "intervention", "run_end", "checkpoint")
 
 # ------------------------------------------------------- context windows
 # These save almost nothing at our scale. They exist because uncapped context
@@ -453,7 +453,11 @@ your step, and what you do is visible to the other researchers immediately.
 Bulletin board
   Post on the shared research bulletin board with `post_intent`. Share what you're \
 exploring, building, or proposing — so other researchers know what you're thinking \
-about. The board is NOT shown to you automatically: each step you are told only how \
+about. Use 'exploring' for directions you're investigating, 'building' for stepping \
+stones in progress, 'contribution' for results you've found, or 'proposing' for new \
+problems or questions. Be as vague or specific as you like. You can add a tag, such \
+as a problem id. Filter reads by intent_type, agent_id, or tag.
+The board is NOT shown to you automatically: each step you are told only how \
 many posts are new since you last looked, and you read them by calling \
 `get_bulletin_board`. Use it to find collaborators, avoid redundant work, and discover \
 stepping stones you can build on.
@@ -551,6 +555,14 @@ ACTION_SCHEMA_EXAMPLE = """Respond with a single json object. Any field may be n
 # so run.py halves it once, logs the downgrade and carries on rather than
 # letting an unattended run produce nothing.
 CALL_MAX_TOKENS = 32000
+PROMPT_VERSION = "paper-c-recovery-v1"
+BOARD_INTENT_TYPES = ("exploring", "building", "contribution", "proposing")
+# Engineering safeguard, not a prompting protocol reported in the paper.
+# Separate bounded storage from agent-written journal/wiki quotas.
+RECOVERY_FILE = "RECOVERY.md"
+RECOVERY_MAX_BYTES = 16384
+RECOVERY_SCRATCH_BYTES = 10000
+RECOVERY_RECEIPT_BYTES = 4000
 
 STEPS_PER_AGENT = 0           # each agent's own step cap. 0 = NO cap: the run is
                               # bounded by the wall clock, the stop file and the
@@ -662,7 +674,10 @@ TOOL_SCHEMAS = [
         "name": "get_bulletin_board",
         "description": "Read the shared research bulletin board. Returns up to `limit` "
                        "posts, oldest first. Nothing from the board reaches you unless "
-                       "you call this.",
+                       "you call this. See what other agents are exploring, building, "
+                       "and proposing. Filter by intent_type, agent_id, or tag. Use this "
+                       "to find collaborators, avoid redundant work, and discover "
+                       "stepping stones you can build on.",
         "parameters": {"type": "object", "properties": {
             "since_id": {"type": "string",
                          "description": "Only posts newer than this post id, e.g. "
@@ -672,6 +687,8 @@ TOOL_SCHEMAS = [
                                          "page back through earlier discussion."},
             "agent_id": {"type": "string",
                          "description": "Only posts by this researcher, e.g. \"agent-03\"."},
+            "intent_type": {"type": "string", "enum": list(BOARD_INTENT_TYPES)},
+            "tag": {"type": "string", "description": "Only posts with this exact tag."},
             "limit": {"type": "integer", "minimum": 1, "maximum": 50,
                       "description": "At most this many posts. Default 20, maximum 50."}},
             "required": []}}},
@@ -753,9 +770,17 @@ TOOL_SCHEMAS = [
         "name": "post_intent",
         "description": "Post on the shared research bulletin board. Share what you're "
                        "exploring, building, or proposing — so other researchers know what "
-                       "you're thinking about. Be as vague or specific as you like.",
+                       "you're thinking about. Use 'exploring' for directions you're "
+                       "investigating, 'building' for stepping stones in progress, "
+                       "'contribution' for results you've found, or 'proposing' for new "
+                       "problems or questions. Be as vague or specific as you like.",
         "parameters": {"type": "object", "properties": {
-            "text": {"type": "string"}}, "required": ["text"]}}},
+            "text": {"type": "string"},
+            "intent_type": {"type": "string", "enum": list(BOARD_INTENT_TYPES),
+                            "description": "Optional category for this post."},
+            "tag": {"type": "string", "maxLength": 100,
+                    "description": "Optional tag, for example the problem id."}},
+            "required": ["text"]}}},
     {"type": "function", "function": {
         "name": "send_direct_message",
         "description": "Forwards a direct message to another researcher.",
@@ -803,8 +828,10 @@ TOOL_SCHEMAS = [
 # MAX_TOOL_HOPS; change one, change the other.
 MEMORY_DESCRIPTION = """PRIVATE MEMORY, AND HOW A STEP WORKS
 
-Every step starts a fresh conversation. Nothing you thought last step is in front of \
-you unless you saved it. You have a private memory directory that lasts the whole \
+Every step starts a fresh conversation. A bounded private recovery excerpt retains \
+your latest scratch work and your own action receipts, including after a cutoff. It \
+is incomplete and unverified; it is not a substitute for your research notes.
+You have a private memory directory that lasts the whole \
 conference and that no other researcher can read:
 
   RESEARCH.md     an append-only journal. Add to it with `append_journal`. Its most \
@@ -812,6 +839,11 @@ recent entries are shown to you at the start of every step, so this is the relia
 way to carry a plan, a search range, or a conclusion forward.
   wiki/<name>.md  pages you create or overwrite with `write_memory`. These are NOT \
 shown automatically — list them with `list_memory` and open one with `read_memory`.
+
+Work in small increments: when you have a candidate, test it before starting another \
+long derivation. Save your current problem, partial result, failed branch, and next \
+action with append_journal or write_memory. On recovery, continue from that state \
+and take the next useful tool action rather than reconstructing the whole search.
 
 A step is a sequence of tool calls. Call as many as you need, in up to 6 rounds. When \
 you have nothing more to do this step, reply with a short note and no tool call; your \

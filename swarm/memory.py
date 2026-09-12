@@ -116,6 +116,41 @@ class MemoryStore:
         os.replace(tmp, target)
 
     # ---------------------------------------------------------------- public
+    def save_recovery(self, agent, text):
+        """Harness-owned bounded checkpoint; never edits the agent's notes.
+
+        This reserved file is not writable through the memory tools. Historical
+        checkpoints remain in the transcript log; this file holds the latest.
+        """
+        data = _encode(text)
+        if agent not in self.agent_ids or data is None or len(data) > config.RECOVERY_MAX_BYTES:
+            return None, "invalid or oversized recovery checkpoint"
+        with self.lock:
+            target = self._resolve(agent, config.RECOVERY_FILE)
+            if (target is None or os.path.islink(os.path.join(self._agent_root(agent),
+                                                            config.RECOVERY_FILE))
+                    or os.path.islink(target + ".tmp")):
+                return None, "unsafe recovery path"
+            try:
+                self._write_atomic(target, data)
+            except OSError as exc:
+                return None, "could not save recovery: %s" % exc
+        return len(data), None
+
+    def recovery(self, agent):
+        """Private prompt context, with a hard read bound and no channel exposure."""
+        if agent not in self.agent_ids:
+            return ""
+        with self.lock:
+            target = self._resolve(agent, config.RECOVERY_FILE)
+            if target is None:
+                return ""
+            try:
+                with open(target, "rb") as handle:
+                    return handle.read(config.RECOVERY_MAX_BYTES).decode("utf-8", errors="replace")
+            except FileNotFoundError:
+                return ""
+
     def index(self, agent):
         """-> [{path, bytes, step}], the journal first, then wiki pages sorted.
 

@@ -106,8 +106,8 @@ def _render_badge(badge):
 
 def _render_memory_index(index):
     if not index:
-        return ("YOUR PRIVATE MEMORY\n\nEmpty. Nothing you work out this step survives "
-                "unless you save it with append_journal or write_memory.")
+        return ("YOUR PRIVATE MEMORY\n\nNo research notes yet. Save durable conclusions "
+                "with append_journal or write_memory; the recovery excerpt is incomplete.")
     lines = ["YOUR PRIVATE MEMORY\n"]
     for entry in index:
         stamp = (", written on step %s" % entry["step"]) if entry.get("step") else ""
@@ -151,6 +151,7 @@ def build_prompt(world, agent, step, batch_reply=None, verdict=None, memory=None
     badge = world.badge(agent)
     index = memory.index(agent) if memory is not None else []
     journal = memory.journal_tail(agent) if memory is not None else ""
+    recovery = memory.recovery(agent) if memory is not None else ""
 
     roster = "PARTICIPANTS\n\nYou are %s. The others are: %s." % (
         agent, ", ".join(a for a in world.agent_ids if a != agent))
@@ -176,7 +177,7 @@ def build_prompt(world, agent, step, batch_reply=None, verdict=None, memory=None
     problems_text = _render_problems(problems)
     badge_text = _render_badge(badge)
     memory_text = "\n\n".join(t for t in (_render_memory_index(index),
-                                           _render_journal_tail(journal)) if t)
+                                           _render_journal_tail(journal), recovery) if t)
 
     agent_block = "\n\n".join([
         own, badge_text, memory_text, problems_text,
@@ -292,7 +293,8 @@ def _do_board(world, memory, agent, step, args):
     posts, meta = world.read_board(agent, since_id=args.get("since_id"),
                                    before_id=args.get("before_id"),
                                    agent_filter=args.get("agent_id"),
-                                   limit=args.get("limit"))
+                                   limit=args.get("limit"), intent_type=args.get("intent_type"),
+                                   tag=args.get("tag"))
     if posts is None:
         return _tool_error(meta.get("error", "the board could not be read"))
     ids = [p["id"] for p in posts]

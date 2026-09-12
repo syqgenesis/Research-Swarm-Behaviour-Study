@@ -109,11 +109,11 @@ class World:
             return record
 
     # ------------------------------------------------------------ the board
-    def post(self, agent, text, round_no):
+    def post(self, agent, text, round_no, intent_type=None, tag=None):
         with self.lock:
             entry = {"artifact_id": self._next_id("post"), "agent": agent,
                      "round": round_no, "step": round_no, "ts": time.time(),
-                     "text": text}
+                     "text": text, "intent_type": intent_type, "tag": tag}
             self.board.append(entry)
             return entry
 
@@ -128,7 +128,7 @@ class World:
             return list(self.board[-config.BOARD_WINDOW:])
 
     def read_board(self, agent, since_id=None, before_id=None,
-                   agent_filter=None, limit=None):
+                   agent_filter=None, limit=None, intent_type=None, tag=None):
         """-> (posts, meta), and marks every returned post seen for `agent`.
 
         The agent chooses how much to read and can page in both directions, so
@@ -149,6 +149,14 @@ class World:
                 selected = [p for p in selected if self._seq(p["artifact_id"], "post") < seq]
             if isinstance(agent_filter, str) and agent_filter:
                 selected = [p for p in selected if p["agent"] == agent_filter]
+            if intent_type is not None:
+                if intent_type not in config.BOARD_INTENT_TYPES:
+                    return None, {"error": "unknown intent_type"}
+                selected = [p for p in selected if p.get("intent_type") == intent_type]
+            if tag is not None:
+                if not isinstance(tag, str) or not tag.strip() or len(tag) > 100:
+                    return None, {"error": "tag must be a non-empty string of at most 100 characters"}
+                selected = [p for p in selected if p.get("tag") == tag]
             size = self._clamp(limit, config.BOARD_PULL_DEFAULT, config.BOARD_PULL_MAX)
             omitted = max(0, len(selected) - size)
             window = selected[-size:]
@@ -158,6 +166,7 @@ class World:
                 seq = self._seq(entry["artifact_id"], "post")
                 posts.append({"id": entry["artifact_id"], "step": entry.get("step"),
                               "agent": entry["agent"], "text": entry["text"],
+                              "intent_type": entry.get("intent_type"), "tag": entry.get("tag"),
                               "unread": seq not in seen})
                 seen.add(seq)
             meta = {"total_posts": len(self.board), "omitted_older": omitted,

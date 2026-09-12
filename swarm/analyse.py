@@ -240,6 +240,56 @@ def group_turns(calls):
     return turns
 
 
+def activity_metrics(calls, events):
+    """Observable activity, not a claim that messages caused a later solution.
+
+    Use actual nested tool timestamps. A read-then-citation is a review lead,
+    not verified useful assistance. Unknown read times do not establish order.
+    """
+    turns = group_turns(calls)
+    action_names = {"test_candidates", "append_journal", "write_memory",
+                    "post_intent", "send_direct_message", "submit_solution",
+                    "submit_feedback", "report_submission"}
+    active = 0
+    for turn in turns:
+        if any(t.get("ok") and t.get("name") in action_names
+               for hop in turn["hops"] for t in hop.get("tool_calls") or []):
+            active += 1
+    artifacts = {e["artifact_id"]: e for e in events
+                 if e.get("kind") in ("post", "dm", "library_commit")
+                 and e.get("artifact_id")}
+    reads = {}
+    for call in calls:
+        agent = call.get("agent")
+        for tool in call.get("tool_calls") or []:
+            when = tool.get("ts")
+            if (not tool.get("ok") or not isinstance(when, (int, float))
+                    or tool.get("name") not in ("get_bulletin_board", "get_messages", "get_library")):
+                continue
+            for artifact_id in tool.get("artifact_ids") or []:
+                artifact = artifacts.get(artifact_id)
+                if artifact and artifact.get("actor") != agent:
+                    key = agent, artifact_id
+                    reads[key] = min(reads.get(key, when), when)
+    cited = set()
+    for event in events:
+        if event.get("kind") not in ("post", "dm", "accept"):
+            continue
+        when = event.get("ts")
+        if not isinstance(when, (int, float)):
+            continue
+        for artifact_id in re.findall(r"\b(?:post|dm|lib)-\d+\b", event.get("text") or ""):
+            key = event.get("actor"), artifact_id
+            if key in reads and reads[key] < when:
+                cited.add((key[0], artifact_id, event.get("artifact_id")))
+    return {"truncated_calls": sum(c.get("finish_reason") == "length" for c in calls),
+            "steps_with_actions": active, "steps_without_actions": len(turns) - active,
+            "peer_artifact_reads": len(reads), "read_then_citations": len(cited),
+            "posts": sum(e.get("kind") == "post" for e in events),
+            "dms": sum(e.get("kind") == "dm" for e in events),
+            "automatic_checkpoints": sum(e.get("kind") == "checkpoint" for e in events)}
+
+
 def analyse(run_id, run_dir=None):
     _validate_run_id(run_id)
     run_dir = run_dir or config.RUN_DIR
@@ -268,7 +318,9 @@ def analyse(run_id, run_dir=None):
     latencies = [c["latency_s"] for c in calls if isinstance(c.get("latency_s"), (int, float))]
     # Per DECISION, not per call: a step that spent three hops reading is one
     # decision, and counting its hops would flatter the parse rate.
-    parsed = [t for t in turns if t["final"].get("parse_ok")]
+    # Old logs mark empty truncated content parse_ok=true. Inspect output itself.
+    parsed = [t for t in turns if any((h.get("raw_content") or "").strip()
+                                    or h.get("tool_calls") for h in t["hops"])]
     with_cot = [t for t in turns if t["reasoning"]]
     errors = [c for c in calls if c.get("error")]
     timestamps = [c["ts"] for c in calls if isinstance(c.get("ts"), (int, float))]
@@ -294,6 +346,13 @@ def analyse(run_id, run_dir=None):
             if turns else "n/a"],
         ["calls with errors", len(errors)],
     ], ["metric", "value"]))
+    activity = activity_metrics(calls, events)
+    print("\n   ACTIVITY AND COLLABORATION")
+    print(_fmt_table([[key.replace("_", " "), value] for key, value in activity.items()],
+                     ["observation", "count"]))
+    print("   Actions include tests, notes and messages, not read-only polling. "
+          "Read-then-citations are leads for review, not proof of useful help; "
+          "reads without recorded tool times are excluded from that ordering test.")
 
     # context composition, rescaled against the real prompt tokens
     sources = ("shared", "history", "board", "dms", "library", "problems",
