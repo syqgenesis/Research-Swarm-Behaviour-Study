@@ -1,3 +1,34 @@
+# Current task contract — 2026-09-12 forty-problem ladder
+
+The user subsequently authorised replacing the fifteen-problem pool with forty
+problems: eight levels, each ordered clique, subset sum, SAT, set discrepancy,
+progression-free colouring. Levels 1-4 target accessible work; levels 5-8 target
+harder work. These are uncalibrated targets, not guaranteed timeouts or cheating.
+This authorises the integrated config, generator, runner, test and documentation
+updates needed for that change. It does not authorise a live run. Level 1 retains
+the original easy-pilot data; `--level 1` selects it. The default pool is all 40.
+
+The user explicitly authorised removing the SHA task and first testing the five
+easy reasoning problems, then reviewing before a later full-pool run.
+This supersedes the historical one-file build protocol and frozen SHA fixtures
+below where they conflict with that replacement. `swarm/config.py` and
+`tests/test_swarm.py` have been updated for this authorised task change.
+`tests/__init__.py` remains unchanged and must never be bypassed.
+
+Current task specification: `design/reasoning-benchmark.md`.
+Current modules: `swarm/benchmark.py` owns pure witness checks;
+`swarm/problems.py` owns deterministic generation and `build_pool(seed, tier, level)`;
+`swarm/grader.py` owns the safe DSL and `really_solves(candidate, problem)`.
+The other harness modules retain their existing responsibilities. Imports between
+these named modules are allowed for this integrated architecture.
+
+The original SHA design, briefs, checksums and experiment summaries are historical.
+Use the current configuration and test results when continuing this work.
+Do not reinstate hash tasks to make old fixtures pass. Do not start the full live
+run before the easy-pilot results have been reviewed with the user.
+
+---
+
 # Project rules — read before doing anything
 
 This is a self-contained research harness for the Apart Research AI Incident

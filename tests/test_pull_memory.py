@@ -53,7 +53,7 @@ class PullChannels(unittest.TestCase):
     def setUp(self):
         self.pool = build_pool()
         self.world = world_module.World(self.pool, ["agent-01", "agent-02", "agent-03"])
-        self.tmp = tempfile.mkdtemp()
+        self.tmp = tempfile.mkdtemp(dir="runs")
         self.memory = memory_module.MemoryStore(self.tmp, self.world.agent_ids)
 
     def tearDown(self):
@@ -166,7 +166,7 @@ class PullChannels(unittest.TestCase):
 
 class MemoryFiles(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp()
+        self.tmp = tempfile.mkdtemp(dir="runs")
         self.store = memory_module.MemoryStore(self.tmp, ["agent-01"])
 
     def tearDown(self):
@@ -223,7 +223,7 @@ class HopLoop(unittest.TestCase):
     def setUp(self):
         self.pool = build_pool()
         self.world = world_module.World(self.pool, ["agent-01"])
-        self.tmp = tempfile.mkdtemp()
+        self.tmp = tempfile.mkdtemp(dir="runs")
         self.memory = memory_module.MemoryStore(self.tmp, ["agent-01"])
         self.real = client.call_model
         self.requests = []
@@ -265,20 +265,49 @@ class HopLoop(unittest.TestCase):
         self.assertEqual(turn["n_calls"], 2)
         self.assertEqual(turn["exposure"]["board_ids"], ["post-0001"])
 
-    def test_the_hop_budget_forces_a_final_answer(self):
+    def test_the_hop_budget_caps_the_step_without_forcing_anything(self):
+        """Every action IS a tool call, so a step that runs out of hops has
+        already done everything it asked for. Nothing is forced, nothing lost."""
         def responder(n, choice):
-            if choice == "none":
-                return reply(json.dumps({"think": "fine"}))
             return reply(None, tool_calls=[call_of("list_memory")])
 
         self.patch(responder)
         turn = run_module._one_step(self.world, "agent-01", 1, 12, {}, self.memory)
-        self.assertEqual(len(self.requests), config.MAX_TOOL_HOPS + 1)
-        self.assertEqual(self.requests[-1]["tool_choice"], "none")
-        self.assertEqual(self.requests[-1]["messages"][-1]["content"], config.FINAL_NUDGE)
-        self.assertIs(self.requests[-1]["tools"], config.TOOL_SCHEMAS)
-        self.assertTrue(turn["parse_ok"])
-        self.assertEqual(turn["action"]["think"], "fine")
+        self.assertEqual(len(self.requests), config.MAX_TOOL_HOPS)
+        self.assertTrue(all(r["tool_choice"] is None for r in self.requests))
+        self.assertTrue(all(r["tools"] is config.TOOL_SCHEMAS for r in self.requests))
+        self.assertEqual(len(turn["tool_log"]), config.MAX_TOOL_HOPS)
+        self.assertIsNone(turn["note"])
+
+    def test_a_step_ends_when_the_model_stops_calling_tools(self):
+        def responder(n, choice):
+            if n == 1:
+                return reply(None, tool_calls=[call_of("list_memory")])
+            return reply("nothing more to do")
+
+        self.patch(responder)
+        turn = run_module._one_step(self.world, "agent-01", 1, 12, {}, self.memory)
+        self.assertEqual(len(self.requests), 2)
+        self.assertEqual(turn["note"], "nothing more to do")
+        self.assertEqual(turn["n_calls"], 2)
+
+    def test_the_prompt_asks_for_tools_not_a_json_object(self):
+        messages, _, _ = agentloop.build_prompt(self.world, "agent-01", 1, memory=self.memory)
+        system, user = messages[0]["content"], messages[1]["content"]
+        self.assertNotIn("single json object", user)
+        self.assertIn("reply with a short note and no tool call", user)
+        self.assertNotIn(config.ACTION_SCHEMA_EXAMPLE, system)
+        for name in config.ACTION_TOOL_NAMES:
+            self.assertIn(name, system)
+
+    def test_the_four_actions_are_tools_and_agentloop_refuses_them(self):
+        """run.py owns them: they need the grader and write their own events."""
+        for name in config.ACTION_TOOL_NAMES:
+            self.assertIn(name, config.TOOL_NAMES)
+            out = agentloop.dispatch_tool(self.world, self.memory, "agent-01", 1,
+                                          call_of(name, {}))
+            self.assertFalse(out["ok"])
+            self.assertIn("handled by the harness", out["error"])
 
     def test_an_api_error_mid_loop_keeps_what_was_already_read(self):
         self.world.post("agent-02", "hello", 1)
@@ -292,7 +321,6 @@ class HopLoop(unittest.TestCase):
         turn = run_module._one_step(self.world, "agent-01", 1, 12, {}, self.memory)
         self.assertEqual(turn["error"], "503 upstream")
         self.assertEqual(turn["exposure"]["board_ids"], ["post-0001"])
-        self.assertFalse(turn["parse_ok"])
         self.assertEqual(turn["n_calls"], 2)
 
     def test_the_spend_cap_mid_loop_aborts_and_keeps_the_billed_hops(self):
@@ -325,7 +353,8 @@ class HopLoop(unittest.TestCase):
         self.assertNotIn("PRIVATE PAGE", body)          # but not opened
         self.assertGreater(ctx["memory"], 0)
         on_disk = os.path.join(self.tmp, "agent-01", config.MEMORY_JOURNAL)
-        self.assertIn("## step 1", open(on_disk).read())
+        with open(on_disk, encoding="utf-8") as handle:
+            self.assertIn("## step 1", handle.read())
 
 
 class ClientContract(unittest.TestCase):
