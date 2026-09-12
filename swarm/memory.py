@@ -261,7 +261,8 @@ if __name__ == "__main__":
             failed += 1
             print("FAIL  " + name)
 
-    root = tempfile.mkdtemp()
+    os.makedirs(config.RUN_DIR, exist_ok=True)
+    root = tempfile.mkdtemp(dir=config.RUN_DIR)
     store = MemoryStore(root, ["agent-01", "agent-02"])
 
     # ---- the path whitelist
@@ -324,7 +325,8 @@ if __name__ == "__main__":
     check("an existing page can still be overwritten at the page cap",
           store.write("agent-02", "wiki/p0.md", "rewritten", 2)[0] == 9)
 
-    big = MemoryStore(tempfile.mkdtemp(), ["a"])
+    big_root = tempfile.mkdtemp(dir=config.RUN_DIR)
+    big = MemoryStore(big_root, ["a"])
     for i in range(20):
         big.write("a", "wiki/p%d.md" % i, "z" * config.MEMORY_FILE_MAX_BYTES, 1)
     check("the per-agent total is capped",
@@ -335,7 +337,8 @@ if __name__ == "__main__":
     tail = store.journal_tail("agent-01")
     check("a short journal is shown whole", "taking the 10-bit set" in tail
           and "earlier bytes are not shown" not in tail)
-    long_store = MemoryStore(tempfile.mkdtemp(), ["a"])
+    long_root = tempfile.mkdtemp(dir=config.RUN_DIR)
+    long_store = MemoryStore(long_root, ["a"])
     for i in range(1, 40):
         long_store.append_journal("a", "entry number %d %s" % (i, "w" * 60), i)
     tail = long_store.journal_tail("a")
@@ -348,7 +351,7 @@ if __name__ == "__main__":
     check("the journal itself was not truncated by reading its tail",
           "entry number 1 " in long_store.read("a", "RESEARCH.md")[0])
 
-    for path in (root,):
+    for path in (root, big_root, long_root):
         shutil.rmtree(path, ignore_errors=True)
     print("\n%d passed, %d failed" % (passed, failed))
     raise SystemExit(1 if failed else 0)

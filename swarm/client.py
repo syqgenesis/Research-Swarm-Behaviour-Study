@@ -31,18 +31,18 @@ from swarm import config
 # all on this model.
 THINKING_EXTRA_BODY = {"thinking": {"type": "enabled"}}
 
-# Every call in this harness asks for one JSON action object, so JSON mode is
-# always on. config.ACTION_SCHEMA_EXAMPLE carries both the literal word "json"
-# and a format example, which DeepSeek requires or it can emit whitespace to the
-# token cap.
+# JSON mode, for requests that do not carry tools. DeepSeek needs the literal
+# word "json" in the prompt and a format example alongside it, or it can emit
+# whitespace to the token cap.
 RESPONSE_FORMAT = {"type": "json_object"}
 
-# Whether json mode may be combined with `tools`. Unverified against the live
-# API when this was written, and it is the one thing gate 0b exists to settle.
-# If tools + response_format returns a 400, set this False: the loop still works
-# because parse_action tolerates fences and wrapped objects, and the final hop
-# is nudged in words. One line, no other change.
-JSON_MODE_WITH_TOOLS = True
+# Whether json mode is requested alongside `tools`. FALSE since 2026-09-12, and
+# now a correctness requirement rather than a fallback: every action is a tool
+# call, so the only free text a model produces is the short note that ends a
+# step. Forcing that note to be a json object is exactly the mismatch that
+# produced the whitespace and unbalanced-brace failures in pull-smoke8. Requests
+# without `tools` are unaffected and still use json mode.
+JSON_MODE_WITH_TOOLS = False
 
 _USAGE_FIELDS = (
     "prompt_tokens",
@@ -54,6 +54,7 @@ _USAGE_FIELDS = (
 
 _spend_lock = threading.Lock()
 _spend_gbp = 0.0
+_spend_cap_gbp = config.SPEND_CAP_GBP
 _client = None
 _client_lock = threading.Lock()
 
@@ -120,10 +121,10 @@ def _charge(cost_gbp):
     with _spend_lock:
         _spend_gbp += cost_gbp
         total = _spend_gbp
-    if total > config.SPEND_CAP_GBP:
+    if total > _spend_cap_gbp:
         raise config.SpendCapExceeded(
             "spend cap breached: %.4f GBP spent against a cap of %.2f"
-            % (total, config.SPEND_CAP_GBP)
+            % (total, _spend_cap_gbp)
         )
     return total
 
@@ -132,11 +133,27 @@ def _guard_cap():
     """Refuse to start a call once the cap is already gone."""
     with _spend_lock:
         total = _spend_gbp
-    if total > config.SPEND_CAP_GBP:
+    if total > _spend_cap_gbp:
         raise config.SpendCapExceeded(
             "spend cap already breached: %.4f GBP against a cap of %.2f"
-            % (total, config.SPEND_CAP_GBP)
+            % (total, _spend_cap_gbp)
         )
+
+
+def set_spend_cap(cap_gbp):
+    """Set this process's run cap without changing the base config contract."""
+    global _spend_cap_gbp
+    if isinstance(cap_gbp, bool) or not isinstance(cap_gbp, (int, float)) or cap_gbp <= 0:
+        raise ValueError("spend cap must be a positive number")
+    with _spend_lock:
+        _spend_cap_gbp = float(cap_gbp)
+
+
+def reset_spend():
+    """Reset accounting before a new run in the same Python process."""
+    global _spend_gbp
+    with _spend_lock:
+        _spend_gbp = 0.0
 
 
 def _status_of(exc):

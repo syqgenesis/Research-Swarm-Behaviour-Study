@@ -64,7 +64,6 @@ def main():
     calls = first.get("tool_calls") or []
     check("the model asked for a tool", bool(calls))
     check("it asked for the board", calls and calls[0]["function"]["name"] == "get_bulletin_board")
-    check("reasoning_content came back", bool(first.get("reasoning_content")))
     if not calls:
         print("\nno tool call to follow up; stopping here.")
         return 1
@@ -77,6 +76,10 @@ def main():
     second = client.call_model(second_messages, max_tokens=2000, tools=config.TOOL_SCHEMAS)
     show("second", second)
     check("the second hop was accepted", second["error"] is None)
+    # A tool-only hop may omit reasoning even in thinking mode. The recorded
+    # unit is the complete step, which includes the answer after the tool result.
+    check("reasoning_content returned during the tool step",
+          bool(first.get("reasoning_content") or second.get("reasoning_content")))
     check("it answered instead of asking again", not (second.get("tool_calls") or []))
     try:
         parsed = json.loads(second.get("content") or "")
@@ -87,7 +90,7 @@ def main():
     print("  (cache hit tokens on the second hop: %d — informational)" % hit)
 
     print("\n--- 3. tool_choice=none forces an answer ---")
-    forced = client.call_model(messages + [{"role": "user", "content": config.FINAL_NUDGE}],
+    forced = client.call_model(messages + [{"role": "user", "content": "Answer now with the json object and no tool calls."}],
                                max_tokens=2000, tools=config.TOOL_SCHEMAS, tool_choice="none")
     show("forced", forced)
     check("the forced call was accepted", forced["error"] is None)

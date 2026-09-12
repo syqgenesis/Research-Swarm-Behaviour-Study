@@ -6,5 +6,6 @@ runs/*.jsonl
 runs/*.memory/
 runs/*.STOP
 runs/*.sqlite
+runs/monitor-watchdog.state
 .DS_Store
 .gstack/
