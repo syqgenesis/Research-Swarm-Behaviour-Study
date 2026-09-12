@@ -1,0 +1,10 @@
+secrets.env
+.venv/
+__pycache__/
+*.pyc
+runs/*.jsonl
+runs/*.memory/
+runs/*.STOP
+runs/*.sqlite
+.DS_Store
+.gstack/
