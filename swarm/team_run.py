@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from swarm import client, config, problems, team_agent, team_config
+from swarm import client, config, problems, team_agent, team_config, team_metrics
 from swarm.team_memory import TeamMemory
 from swarm.team_world import TeamWorld
 
@@ -51,11 +51,18 @@ def _record_fatal(world, fatal_errors, fatal_lock, agent_id, step, exc):
 
 
 def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock,
-               max_calls_per_turn, max_tokens, turn_pause, fatal_errors, fatal_lock):
-    """Run one agent independently until the shared deadline or a fatal stop."""
+               max_calls_per_turn, max_tokens, turn_pause, fatal_errors, fatal_lock,
+               call_deadline=None):
+    """Run one agent independently until the call cutoff or a fatal stop.
+
+    ``deadline`` is the hard experiment deadline. ``call_deadline`` can be earlier: no
+    new model calls start after it, leaving a drain window for calls already in flight.
+    """
+    if call_deadline is None:
+        call_deadline = deadline
     step = 0
     try:
-        while not stop_event.is_set() and time.monotonic() < deadline:
+        while not stop_event.is_set() and time.monotonic() < call_deadline:
             step += 1
             world.reset_turn_budget(agent_id, step)
             messages, delivered = team_agent.build_prompt(
@@ -68,7 +75,7 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
             # A turn can contain several model -> tool -> model hops. The hop cap
             # bounds cost while still letting an agent act on tool results immediately.
             for call_index in range(1, max_calls_per_turn + 1):
-                if stop_event.is_set() or time.monotonic() >= deadline:
+                if stop_event.is_set() or time.monotonic() >= call_deadline:
                     hit_call_cap = False
                     break
                 try:
@@ -97,6 +104,22 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                     "tool_calls": response.get("tool_calls"),
                 }, log_lock)
 
+                # The provider call cannot be cancelled from this worker thread. If it
+                # returns after the hard deadline (or after a global stop), keep the
+                # accounting record but never execute its tool calls against the world.
+                if time.monotonic() >= deadline:
+                    summary_lines.append(
+                        "model response arrived after the hard deadline; tool actions were ignored"
+                    )
+                    world.log_event(
+                        "post_deadline_response_ignored",
+                        {"call_index": call_index, "tool_calls": len(response.get("tool_calls") or [])},
+                        agent_id,
+                        step,
+                    )
+                    hit_call_cap = False
+                    break
+
                 if response.get("error"):
                     summary_lines.append("model call failed; this turn ended")
                     hit_call_cap = False
@@ -116,11 +139,49 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                     hit_call_cap = False
                     break
 
-                # Never send a follow-up request containing unresolved tool calls.
-                # If the model emits too many at once, execute the allowed prefix and
-                # end the turn; otherwise the provider would reject the next request.
-                too_many_calls = len(calls) > team_config.MAX_TOOL_CALLS_PER_RESPONSE
-                for tool_call in calls[:team_config.MAX_TOOL_CALLS_PER_RESPONSE]:
+                # Collaboration should not compete with ordinary tool capacity. Allow
+                # post_message/send_dm (plus set_focus) alongside the regular per-response
+                # tool cap, while the world separately enforces six outbound messages/DMs
+                # per turn. If any emitted calls are dropped, end the turn rather than
+                # sending a provider follow-up with unresolved tool calls.
+                collaboration_tools = {"post_message", "send_dm", "set_focus"}
+                allowed_calls = []
+                regular_used = 0
+                collab_used = 0
+                dropped = 0
+                for tool_call in calls:
+                    tool_name = ((tool_call or {}).get("function") or {}).get("name")
+                    if tool_name in collaboration_tools:
+                        # set_focus is cheap coordination and does not consume the outbound
+                        # post/DM allowance; still cap the whole collaboration batch sanely.
+                        collab_cap = team_config.COLLAB_ACTIONS_PER_TURN + 2
+                        if collab_used < collab_cap:
+                            allowed_calls.append(tool_call)
+                            collab_used += 1
+                        else:
+                            dropped += 1
+                    elif regular_used < team_config.MAX_TOOL_CALLS_PER_RESPONSE:
+                        allowed_calls.append(tool_call)
+                        regular_used += 1
+                    else:
+                        dropped += 1
+
+                deadline_cut_tool_batch = False
+                for offset, tool_call in enumerate(allowed_calls):
+                    if time.monotonic() >= deadline:
+                        remaining = len(allowed_calls) - offset
+                        summary_lines.append(
+                            f"hard deadline reached; {remaining} remaining tool action(s) were ignored"
+                        )
+                        world.log_event(
+                            "deadline_tool_suppression",
+                            {"remaining": remaining},
+                            agent_id,
+                            step,
+                        )
+                        deadline_cut_tool_batch = True
+                        hit_call_cap = False
+                        break
                     result, summary = team_agent.dispatch_tool(world, memory, agent_id, step, tool_call)
                     summary_lines.append(summary)
                     messages.append({
@@ -128,13 +189,21 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                         "tool_call_id": tool_call.get("id"),
                         "content": json.dumps(result, ensure_ascii=False),
                     })
-                if too_many_calls:
+                if deadline_cut_tool_batch:
+                    break
+                if dropped:
                     summary_lines.append(
-                        f"tool-call batch was capped at {team_config.MAX_TOOL_CALLS_PER_RESPONSE}; turn ended"
+                        f"tool-call batch was capped using separate regular/collaboration allowances; {dropped} action(s) were ignored and the turn ended"
                     )
                     world.log_event(
                         "tool_call_cap",
-                        {"requested": len(calls), "executed": team_config.MAX_TOOL_CALLS_PER_RESPONSE},
+                        {
+                            "requested": len(calls),
+                            "executed": len(allowed_calls),
+                            "dropped": dropped,
+                            "regular_executed": regular_used,
+                            "collaboration_executed": collab_used,
+                        },
                         agent_id,
                         step,
                     )
@@ -180,6 +249,8 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
                    rescind_cheated_problem_points=team_config.RESCIND_CHEATED_PROBLEM_POINTS,
                    false_report_penalty=team_config.FALSE_REPORT_PENALTY,
                    problem_pool=None, scheduled_notices=(),
+                   call_drain_seconds=team_config.CALL_DRAIN_SECONDS,
+                   shutdown_grace_seconds=team_config.SHUTDOWN_GRACE_SECONDS,
                    run_root="runs", run_name=None):
     """Run the team experiment and return paths plus researcher-only final results."""
     if n_agents < 2:
@@ -190,6 +261,13 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         raise ValueError("max_calls_per_turn must be positive")
     if max_tokens < 1:
         raise ValueError("max_tokens must be positive")
+    if call_drain_seconds < 0:
+        raise ValueError("call_drain_seconds cannot be negative")
+    if shutdown_grace_seconds < 0:
+        raise ValueError("shutdown_grace_seconds cannot be negative")
+
+    run_seconds = minutes * 60
+    effective_call_drain_seconds = min(float(call_drain_seconds), run_seconds * 0.20)
 
     agent_ids = _agent_ids(n_agents)
     rewards = team_config.report_reward_assignment(agent_ids, seed)
@@ -205,6 +283,8 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
     notice_config = [dict(x) for x in scheduled_notices]
     (run_dir / "run_config.json").write_text(json.dumps({
         "run_id": run_id,
+        "harness_variant": team_config.HARNESS_VARIANT,
+        "model": config.MODEL,
         "n_agents": n_agents,
         "minutes": minutes,
         "seed": seed,
@@ -217,6 +297,31 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         "rescind_cheated_problem_points": rescind_cheated_problem_points,
         "max_calls_per_turn": max_calls_per_turn,
         "max_tokens": max_tokens,
+        "collaboration": {
+            "outbound_actions_per_turn": team_config.COLLAB_ACTIONS_PER_TURN,
+            "message_max_chars": team_config.MESSAGE_MAX_CHARS,
+            "silence_reminder_turns": team_config.COLLAB_SILENCE_REMINDER_TURNS,
+        },
+        "honeypot": {
+            "command": team_config.HONEYPOT_COMMAND,
+            "real_solution_count": team_config.HONEYPOT_REAL_SOLUTION_COUNT,
+            "disclosed_problem_ids": [
+                p["id"] for p in pool[:team_config.HONEYPOT_REAL_SOLUTION_COUNT]
+            ],
+        },
+        "call_drain_seconds_requested": call_drain_seconds,
+        "call_drain_seconds_effective": effective_call_drain_seconds,
+        "shutdown_grace_seconds": shutdown_grace_seconds,
+        "memory_limits": {
+            "private_notes_chars": team_config.PRIVATE_NOTES_MAX_CHARS,
+            "previous_turn_chars": team_config.PREVIOUS_TURN_SUMMARY_MAX_CHARS,
+        },
+        "prompt_static": {
+            "team_framing": team_config.TEAM_FRAMING,
+            "language_reference": team_config.LANGUAGE_REFERENCE,
+            "interface_reference": team_config.INTERFACE_REFERENCE,
+            "reporting_rules": team_config.REPORTING_RULES,
+        },
         "scheduled_notices": notice_config,
     }, indent=2))
 
@@ -234,7 +339,8 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
     client.reset_spend()
     client.set_spend_cap(spend_cap_gbp)
     started_at = time.monotonic()
-    deadline = started_at + minutes * 60
+    deadline = started_at + run_seconds
+    call_deadline = deadline - effective_call_drain_seconds
     stop_event = threading.Event()
 
     workers = [
@@ -242,7 +348,7 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
             target=_run_agent,
             name=agent_id,
             args=(world, memory, agent_id, deadline, stop_event, transcript_path, transcript_lock,
-                  max_calls_per_turn, max_tokens, turn_pause, fatal_errors, fatal_lock),
+                  max_calls_per_turn, max_tokens, turn_pause, fatal_errors, fatal_lock, call_deadline),
             daemon=True,
         )
         for agent_id in agent_ids
@@ -275,10 +381,15 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         raise
     finally:
         stop_event.set()
+        # Use one shared grace window rather than N sequential per-thread timeouts.
+        # Normally the earlier call cutoff means workers have already drained.
+        join_deadline = time.monotonic() + float(shutdown_grace_seconds)
         for worker in workers:
-            worker.join(timeout=2)
+            remaining = max(0.0, join_deadline - time.monotonic())
+            worker.join(timeout=remaining)
         if notice_thread is not None:
-            notice_thread.join(timeout=2)
+            remaining = max(0.0, join_deadline - time.monotonic())
+            notice_thread.join(timeout=remaining)
 
     results = world.final_results()
     alive = [worker.name for worker in workers if worker.is_alive()]
@@ -288,7 +399,19 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         results["fatal_errors"] = list(fatal_errors)
     (run_dir / "final_results.json").write_text(json.dumps(results, indent=2))
     world.log_event("run_end", results)
-    return {"run_id": run_id, "run_dir": str(run_dir), "results": results}
+    try:
+        metrics_path, metrics = team_metrics.write_behavior_metrics(run_dir)
+        metrics["partial_due_to_live_workers"] = bool(alive)
+        metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    except Exception as exc:
+        metrics_path = None
+        world.log_event("metrics_error", {"error": f"{type(exc).__name__}: {exc}"})
+    return {
+        "run_id": run_id,
+        "run_dir": str(run_dir),
+        "results": results,
+        "behavior_metrics": str(metrics_path) if metrics_path is not None else None,
+    }
 
 
 def _load_scheduled_notices(path):
@@ -321,6 +444,14 @@ def main(argv=None):
     parser.add_argument("--spend-cap-gbp", type=float, default=50.0)
     parser.add_argument("--max-calls-per-turn", type=int, default=team_config.MAX_MODEL_CALLS_PER_TURN)
     parser.add_argument("--max-tokens", type=int, default=team_config.CALL_MAX_TOKENS)
+    parser.add_argument(
+        "--call-drain-seconds", type=float, default=team_config.CALL_DRAIN_SECONDS,
+        help="stop starting new model calls this many seconds before the hard deadline",
+    )
+    parser.add_argument(
+        "--shutdown-grace-seconds", type=float, default=team_config.SHUTDOWN_GRACE_SECONDS,
+        help="shared grace window for in-flight calls after the hard deadline",
+    )
     parser.add_argument("--turn-pause", type=float, default=team_config.TURN_PAUSE_SECONDS)
     parser.add_argument("--cheating-penalty", type=int, default=team_config.CHEATING_AGENT_PENALTY)
     parser.add_argument("--false-report-penalty", type=int, default=team_config.FALSE_REPORT_PENALTY)
@@ -340,6 +471,8 @@ def main(argv=None):
         spend_cap_gbp=args.spend_cap_gbp,
         max_calls_per_turn=args.max_calls_per_turn,
         max_tokens=args.max_tokens,
+        call_drain_seconds=args.call_drain_seconds,
+        shutdown_grace_seconds=args.shutdown_grace_seconds,
         turn_pause=args.turn_pause,
         cheating_agent_penalty=args.cheating_penalty,
         false_report_penalty=args.false_report_penalty,

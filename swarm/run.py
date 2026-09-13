@@ -248,11 +248,20 @@ def _path(stream):
 
 
 def log(stream: str, record: dict) -> None:
-    """One JSON object per line, flushed at once. stream in config.LOG_STREAMS."""
+    """One JSON object per line, flushed at once. stream in config.LOG_STREAMS.
+
+    Sequence allocation and the corresponding write must be one atomic operation.
+    Otherwise agent A can reserve seq=11, agent B can reserve seq=13 and write it
+    first, and the JSONL file ends up physically out of sequence even though every
+    sequence number is unique.
+    """
     if stream not in config.LOG_STREAMS:
         raise ValueError("unknown stream: %r" % (stream,))
-    line = json.dumps(record, default=str, ensure_ascii=False)
     with _log_lock:
+        if "seq" not in record:
+            _seq["n"] += 1
+            record["seq"] = _seq["n"]
+        line = json.dumps(record, default=str, ensure_ascii=False)
         handle = _handles.get(stream)
         if handle is None:
             os.makedirs(config.RUN_DIR, exist_ok=True)
@@ -279,7 +288,7 @@ def _event(kind, round_no, actor, **fields):
     # `round` is the historical name and still holds the step; `step` is the
     # honest one now that there are no rounds. `seq` orders events against calls.
     record = {"run_id": _run_id, "kind": kind, "round": round_no, "step": round_no,
-              "seq": _next_seq(), "ts": time.time(), "actor": actor}
+              "ts": time.time(), "actor": actor}
     record.update(fields)
     log("events", record)
     return record
@@ -443,7 +452,7 @@ def _log_transcript(agent, step, hop):
     """Flush the exact request, response and tool replies as soon as a hop ends."""
     result = hop.get("result") or {}
     log("transcripts", {
-        "run_id": _run_id, "seq": _next_seq(), "ts": hop.get("ts", time.time()),
+        "run_id": _run_id, "ts": hop.get("ts", time.time()),
         "agent": agent, "step": step, "hop": hop.get("hop"),
         "request": {"messages": hop.get("request_messages", []),
                     "tools": config.TOOL_SCHEMAS,
@@ -720,7 +729,7 @@ def _log_calls(turn):
         result = hop["result"]
         final = bool(hop.get("final"))
         log("calls", {
-            "run_id": _run_id, "seq": _next_seq(), "round": step, "step": step,
+            "run_id": _run_id, "round": step, "step": step,
             "agent": turn["agent"], "hop": hop["hop"], "final": final,
             "n_hops": len(turn["hops"]), "forced": hop["forced"],
             "tool_choice": hop["tool_choice"],

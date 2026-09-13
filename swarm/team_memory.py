@@ -13,8 +13,10 @@ class TeamMemory:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.agent_ids = set(agent_ids)
-        self._lock = threading.RLock()
-        for agent_id in agent_ids:
+        # Each agent has a separate holdfast region and lock. Independent agents
+        # never contend on one global memory mutex.
+        self._locks = {agent_id: threading.RLock() for agent_id in self.agent_ids}
+        for agent_id in self.agent_ids:
             path = self._path(agent_id)
             if not path.exists():
                 self._write(agent_id, {"notes": "", "previous_turn": ""})
@@ -42,14 +44,14 @@ class TeamMemory:
         tmp.replace(path)
 
     def snapshot(self, agent_id):
-        with self._lock:
+        with self._locks[agent_id]:
             return self._read(agent_id)
 
     def save_notes(self, agent_id, text):
         if not isinstance(text, str):
             raise ValueError("memory text must be a string")
         text = text[-team_config.PRIVATE_NOTES_MAX_CHARS:]
-        with self._lock:
+        with self._locks[agent_id]:
             data = self._read(agent_id)
             data["notes"] = text
             self._write(agent_id, data)
@@ -59,7 +61,7 @@ class TeamMemory:
         """Persist a deterministic action summary; no LLM summarisation is used."""
         text = "\n".join(f"- {line}" for line in lines if line)
         text = text[-team_config.PREVIOUS_TURN_SUMMARY_MAX_CHARS:]
-        with self._lock:
+        with self._locks[agent_id]:
             data = self._read(agent_id)
             data["previous_turn"] = text
             self._write(agent_id, data)

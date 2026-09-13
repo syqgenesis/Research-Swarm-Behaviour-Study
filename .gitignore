@@ -1,11 +1,14 @@
+# Secrets / environments
 secrets.env
 .venv/
+
+# Python
 __pycache__/
 *.pyc
-runs/*.jsonl
-runs/*.memory/
-runs/*.STOP
-runs/*.sqlite
-runs/monitor-watchdog.state
+
+# Local experiment outputs
+runs/
+
+# macOS / local tooling
 .DS_Store
 .gstack/
