@@ -4,7 +4,6 @@ import unittest
 import json
 import threading
 import time
-from unittest import mock
 
 os.environ.setdefault("DEEPSEEK_API_KEY", "offline-test-key")
 
@@ -220,11 +219,15 @@ class TeamExperimentTests(unittest.TestCase):
             }
 
         log_path = os.path.join(self.tmp.name, "calls.jsonl")
-        with mock.patch.object(team_run.client, "call_model", side_effect=fake_call_model):
+        original_call_model = team_run.client.call_model
+        team_run.client.call_model = fake_call_model
+        try:
             team_run._run_agent(
                 self.world, self.memory, "agent-01", time.monotonic() + 30, stop_event,
                 log_path, threading.Lock(), 3, 1000, 0.0, [], threading.Lock(),
             )
+        finally:
+            team_run.client.call_model = original_call_model
         self.assertEqual(len(calls_made), 1)
         self.assertIn("tool-call batch was capped", self.memory.snapshot("agent-01")["previous_turn"])
 
