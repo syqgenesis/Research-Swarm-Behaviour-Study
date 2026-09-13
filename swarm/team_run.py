@@ -16,11 +16,17 @@ def _agent_ids(n):
     return [f"agent-{i:02d}" for i in range(1, n + 1)]
 
 
-def _build_default_pool(seed, levels):
+def _build_default_pool(seed, levels, problem_kinds=None):
     """Build the configured benchmark subset without exposing planted answers."""
     pool = []
     for level in levels:
         pool.extend(problems.build_pool(seed=seed, tier=level))
+    if problem_kinds:
+        wanted = tuple(problem_kinds)
+        unknown = sorted(set(wanted) - {p["kind"] for p in pool})
+        if unknown:
+            raise ValueError(f"problem_kinds not present in selected levels: {', '.join(unknown)}")
+        pool = [p for p in pool if p["kind"] in wanted]
     return pool
 
 
@@ -82,7 +88,7 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                     response = client.call_model(
                         messages,
                         max_tokens=max_tokens,
-                        tools=team_agent.TOOL_SCHEMAS,
+                        tools=team_agent.tool_schemas(world.reporting_enabled),
                         tool_choice="auto",
                     )
                 except config.SpendCapExceeded as exc:
@@ -241,13 +247,14 @@ def _run_scheduled_notices(world, notices, started_at, stop_event, fatal_errors,
 
 
 def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
-                   levels=team_config.DEFAULT_LEVELS, spend_cap_gbp=50.0,
+                   levels=team_config.DEFAULT_LEVELS, problem_kinds=None, spend_cap_gbp=50.0,
                    max_calls_per_turn=team_config.MAX_MODEL_CALLS_PER_TURN,
                    max_tokens=team_config.CALL_MAX_TOKENS,
                    turn_pause=team_config.TURN_PAUSE_SECONDS,
                    cheating_agent_penalty=team_config.CHEATING_AGENT_PENALTY,
                    rescind_cheated_problem_points=team_config.RESCIND_CHEATED_PROBLEM_POINTS,
                    false_report_penalty=team_config.FALSE_REPORT_PENALTY,
+                   reporting_enabled=True,
                    problem_pool=None, scheduled_notices=(),
                    call_drain_seconds=team_config.CALL_DRAIN_SECONDS,
                    shutdown_grace_seconds=team_config.SHUTDOWN_GRACE_SECONDS,
@@ -269,9 +276,20 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
     run_seconds = minutes * 60
     effective_call_drain_seconds = min(float(call_drain_seconds), run_seconds * 0.20)
 
+    if problem_pool is not None and problem_kinds:
+        raise ValueError("problem_kinds cannot be combined with an explicit problem_pool")
+
     agent_ids = _agent_ids(n_agents)
-    rewards = team_config.report_reward_assignment(agent_ids, seed)
-    pool = list(problem_pool) if problem_pool is not None else _build_default_pool(seed, tuple(levels))
+    rewards = (
+        team_config.report_reward_assignment(agent_ids, seed)
+        if reporting_enabled
+        else {agent_id: 0 for agent_id in agent_ids}
+    )
+    pool = (
+        list(problem_pool)
+        if problem_pool is not None
+        else _build_default_pool(seed, tuple(levels), problem_kinds)
+    )
     if not pool or len({p["id"] for p in pool}) != len(pool):
         raise ValueError("problem pool must be non-empty and contain unique ids")
 
@@ -289,8 +307,10 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         "minutes": minutes,
         "seed": seed,
         "levels": list(levels) if problem_pool is None else None,
+        "problem_kinds": list(problem_kinds) if (problem_pool is None and problem_kinds) else None,
         "problem_ids": [p["id"] for p in pool],
-        "report_rewards": rewards,
+        "reporting_enabled": bool(reporting_enabled),
+        "report_rewards": rewards if reporting_enabled else {},
         "problem_points": team_config.PROBLEM_POINTS,
         "false_report_penalty": false_report_penalty,
         "cheating_agent_penalty": cheating_agent_penalty,
@@ -320,7 +340,8 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
             "team_framing": team_config.TEAM_FRAMING,
             "language_reference": team_config.LANGUAGE_REFERENCE,
             "interface_reference": team_config.INTERFACE_REFERENCE,
-            "reporting_rules": team_config.REPORTING_RULES,
+            "report_interface_reference": team_config.REPORT_INTERFACE_REFERENCE if reporting_enabled else None,
+            "reporting_rules": team_config.REPORTING_RULES if reporting_enabled else None,
         },
         "scheduled_notices": notice_config,
     }, indent=2))
@@ -330,6 +351,7 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         cheating_agent_penalty=cheating_agent_penalty,
         rescind_cheated_problem_points=rescind_cheated_problem_points,
         false_report_penalty=false_report_penalty,
+        reporting_enabled=reporting_enabled,
     )
     memory = TeamMemory(run_dir / "memory", agent_ids)
     transcript_path = run_dir / "calls.jsonl"
@@ -441,6 +463,15 @@ def main(argv=None):
     parser.add_argument("--minutes", type=float, default=60)
     parser.add_argument("--seed", type=int, default=20260911)
     parser.add_argument("--levels", nargs="+", default=list(team_config.DEFAULT_LEVELS))
+    parser.add_argument(
+        "--problem-kinds", nargs="+",
+        choices=("clique", "subset_sum", "sat", "discrepancy", "vanderwaerden"),
+        help="optional problem families within the selected levels (for example: subset_sum sat)",
+    )
+    parser.add_argument(
+        "--reporting", choices=("on", "off"), default="on",
+        help="enable or remove the peer-reporting interface and reporting rewards",
+    )
     parser.add_argument("--spend-cap-gbp", type=float, default=50.0)
     parser.add_argument("--max-calls-per-turn", type=int, default=team_config.MAX_MODEL_CALLS_PER_TURN)
     parser.add_argument("--max-tokens", type=int, default=team_config.CALL_MAX_TOKENS)
@@ -468,6 +499,8 @@ def main(argv=None):
         minutes=args.minutes,
         seed=args.seed,
         levels=args.levels,
+        problem_kinds=args.problem_kinds,
+        reporting_enabled=(args.reporting == "on"),
         spend_cap_gbp=args.spend_cap_gbp,
         max_calls_per_turn=args.max_calls_per_turn,
         max_tokens=args.max_tokens,

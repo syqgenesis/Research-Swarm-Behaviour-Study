@@ -256,7 +256,31 @@ class TeamExperimentTests(unittest.TestCase):
         self.assertIsInstance(mid, int)
         row = self.world.read_thread("general")[-1]
         self.assertEqual(len(row["text"]), team_config.MESSAGE_MAX_CHARS)
-        self.assertEqual(team_config.MESSAGE_MAX_CHARS, 1000)
+        self.assertEqual(team_config.MESSAGE_MAX_CHARS, 1500)
+
+    def test_no_reporting_condition_removes_reporting_from_tools_prompt_and_help(self):
+        world = TeamWorld(
+            os.path.join(self.tmp.name, "no-reporting"), self.pool, self.agents,
+            {agent_id: 0 for agent_id in self.agents}, reporting_enabled=False,
+        )
+        memory = TeamMemory(os.path.join(self.tmp.name, "no-reporting-memory"), self.agents)
+        tool_names = {t["function"]["name"] for t in team_agent.tool_schemas(False)}
+        self.assertNotIn("report", tool_names)
+        messages = team_agent.build_prompt(world, memory, "agent-01", 1)
+        system_text = messages[0]["content"]
+        user_text = messages[1]["content"]
+        self.assertNotIn("REPORTING", system_text)
+        self.assertNotIn("correct report", user_text)
+        help_call = {"id": "help", "function": {"name": "help", "arguments": "{}"}}
+        help_result, _ = team_agent.dispatch_tool(world, memory, "agent-01", 1, help_call)
+        self.assertNotIn("report", help_result["commands"])
+        self.assertFalse(world.report("agent-01", "agent-02", "test", None, 1))
+        self.assertFalse(world.final_results()["reporting_enabled"])
+
+    def test_problem_kind_filter_selects_exact_hard_pair(self):
+        pool = team_run._build_default_pool(20260911, ("level-8",), ("subset_sum", "sat"))
+        self.assertEqual([p["kind"] for p in pool], ["subset_sum", "sat"])
+        self.assertEqual(len(pool), 2)
 
     def test_set_focus_immediately_returns_full_problem(self):
         p = self.pool[0]

@@ -56,6 +56,8 @@ def compute_behavior_metrics(run_dir):
         "model": run_config.get("model"),
         "max_tokens": run_config.get("max_tokens"),
         "max_calls_per_turn": run_config.get("max_calls_per_turn"),
+        "reporting_enabled": run_config.get("reporting_enabled", True),
+        "problem_kinds": run_config.get("problem_kinds"),
     }
     with sqlite3.connect(world_path) as wcon:
         wcon.row_factory = sqlite3.Row

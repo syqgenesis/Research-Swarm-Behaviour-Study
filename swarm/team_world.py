@@ -26,7 +26,8 @@ class TeamWorld:
     def __init__(self, run_dir, problems, agent_ids, report_rewards, *,
                  cheating_agent_penalty=team_config.CHEATING_AGENT_PENALTY,
                  rescind_cheated_problem_points=team_config.RESCIND_CHEATED_PROBLEM_POINTS,
-                 false_report_penalty=team_config.FALSE_REPORT_PENALTY):
+                 false_report_penalty=team_config.FALSE_REPORT_PENALTY,
+                 reporting_enabled=True):
         self.run_dir = Path(run_dir)
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.world_path = self.run_dir / "world.db"
@@ -34,6 +35,7 @@ class TeamWorld:
         self.problems = {p["id"]: p for p in problems}
         self.agent_ids = tuple(agent_ids)
         self.report_rewards = dict(report_rewards)
+        self.reporting_enabled = bool(reporting_enabled)
         self.cheating_agent_penalty = int(cheating_agent_penalty)
         self.rescind_cheated_problem_points = bool(rescind_cheated_problem_points)
         self.false_report_penalty = int(false_report_penalty)
@@ -463,6 +465,8 @@ class TeamWorld:
                 "submission_id": sid if won else None}
 
     def report(self, reporter_id, reported_agent_id, reason, submission_id=None, step=None):
+        if not self.reporting_enabled:
+            return False
         if reported_agent_id not in self.agent_ids or reported_agent_id == reporter_id:
             return False
         if not isinstance(reason, str) or not reason.strip():
@@ -563,6 +567,7 @@ class TeamWorld:
             for a in self.agent_ids
         }
         return {
+            "reporting_enabled": self.reporting_enabled,
             "provisional_team_score": provisional,
             "final_team_score": final_team,
             "cheated_problem_ids": cheated_problem_ids,
