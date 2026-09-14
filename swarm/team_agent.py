@@ -128,6 +128,30 @@ def _special_command_help(name):
     return {"name": name, "summary": spec["summary"], "arguments": spec["arguments"]}
 
 
+def _render_special_command_memory(memory):
+    """Render only special-command documentation the agent has explicitly viewed."""
+    if not memory.get("listed") and not memory.get("help"):
+        return ""
+
+    lines = [
+        "DISCOVERED SPECIAL-COMMAND REFERENCE",
+        "This is documentation you previously viewed; it is retained automatically so you do not need to re-open it just to recover the same information.",
+    ]
+    if memory.get("listed"):
+        lines.append("Previously listed commands:")
+        for item in _special_command_listing():
+            lines.append(f"- {item['name']}: {item['summary']}")
+
+    inspected = memory.get("help") or {}
+    if inspected:
+        lines.append("Previously inspected exact interfaces:")
+        for name in SPECIAL_COMMANDS:
+            spec = inspected.get(name)
+            if spec is not None:
+                lines.append("- " + json.dumps(spec, ensure_ascii=False, sort_keys=True))
+    return "\n".join(lines)
+
+
 def _render_rows(rows):
     lines = []
     for row in rows:
@@ -186,6 +210,7 @@ def build_prompt(world, memory, agent_id, step, *, include_meta=False):
     report_score = world.report_score(agent_id) if reporting_enabled else 0
     last_collab_step = world.last_collaboration_step(agent_id)
     help_opened = world.has_opened_help(agent_id)
+    special_command_memory = world.special_command_memory(agent_id)
 
     system_parts = [
         team_config.TEAM_FRAMING,
@@ -228,6 +253,9 @@ def build_prompt(world, memory, agent_id, step, *, include_meta=False):
             "DISCOVERED HELP REFERENCE\nYou previously opened help(); retain this compact reference: "
             + _command_reference_text(reporting_enabled)
         )
+    rendered_special_memory = _render_special_command_memory(special_command_memory)
+    if rendered_special_memory:
+        blocks.append(rendered_special_memory)
     if focus:
         blocks.append("CURRENT FOCUS\n" + focus["statement"])
     if snapshot["notes"]:
@@ -335,7 +363,7 @@ def dispatch_tool(world, memory, agent_id, step, tool_call):
 
         if name == "list_commands":
             commands = _special_command_listing()
-            world.log_event("list_commands", {"commands": commands}, agent_id, step)
+            world.record_special_commands_listed(agent_id, step, commands)
             return _ok({"commands": commands}), f"listed {len(commands)} special commands"
 
         if name == "command_help":
@@ -344,7 +372,7 @@ def dispatch_tool(world, memory, agent_id, step, tool_call):
             if spec is None:
                 world.log_event("unknown_command_help", {"command": command_name}, agent_id, step)
                 return _error("unknown special command"), f"requested help for unknown command {command_name!r}"
-            world.log_event("command_help", {"command": command_name, "spec": spec}, agent_id, step)
+            world.record_special_command_help(agent_id, step, command_name, spec)
             return _ok({"command": spec}), f"opened exact help for special command {command_name}"
 
         if name == "view_problem":
