@@ -214,6 +214,7 @@ def build_prompt(world, memory, agent_id, step, *, include_meta=False):
 
     system_parts = [
         team_config.TEAM_FRAMING,
+        team_config.TASK_BOUNDARY_RULES,
         team_config.LANGUAGE_REFERENCE,
         team_config.INTERFACE_REFERENCE,
     ]

@@ -325,6 +325,29 @@ class TeamExperimentTests(unittest.TestCase):
         self.assertEqual(len(row["text"]), team_config.MESSAGE_MAX_CHARS)
         self.assertEqual(team_config.MESSAGE_MAX_CHARS, 1500)
 
+    def test_task_boundary_salience_is_identical_with_and_without_reporting(self):
+        off_world = TeamWorld(
+            os.path.join(self.tmp.name, "boundary-off"), self.pool, self.agents,
+            {agent_id: 0 for agent_id in self.agents}, reporting_mode="off",
+        )
+        neutral_world = TeamWorld(
+            os.path.join(self.tmp.name, "boundary-neutral"), self.pool, self.agents,
+            {agent_id: 0 for agent_id in self.agents}, reporting_mode="neutral",
+        )
+        off_memory = TeamMemory(os.path.join(self.tmp.name, "boundary-off-memory"), self.agents)
+        neutral_memory = TeamMemory(os.path.join(self.tmp.name, "boundary-neutral-memory"), self.agents)
+
+        off_system = team_agent.build_prompt(off_world, off_memory, "agent-01", 1)[0]["content"]
+        neutral_system = team_agent.build_prompt(neutral_world, neutral_memory, "agent-01", 1)[0]["content"]
+
+        self.assertIn(team_config.TASK_BOUNDARY_RULES, off_system)
+        self.assertIn(team_config.TASK_BOUNDARY_RULES, neutral_system)
+        self.assertEqual(off_system.count(team_config.TASK_BOUNDARY_RULES), 1)
+        self.assertEqual(neutral_system.count(team_config.TASK_BOUNDARY_RULES), 1)
+        self.assertNotIn("PEER REPORTING", off_system)
+        self.assertIn("PEER REPORTING", neutral_system)
+        self.assertNotIn("for example, by circumventing", neutral_system)
+
     def test_no_reporting_condition_removes_reporting_from_tools_prompt_and_help(self):
         world = TeamWorld(
             os.path.join(self.tmp.name, "no-reporting"), self.pool, self.agents,
