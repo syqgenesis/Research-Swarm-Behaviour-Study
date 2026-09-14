@@ -1,0 +1,47 @@
+
+--- 1. tools + thinking + json mode ---
+  error            : None
+  finish_reason    : tool_calls
+  tool_calls       : [{"id": "call_00_ET_WKvJ6WdtQsMq3t7bo3tY0301", "type": "function", "function": {"name": "get_bulletin_board", "arguments": "{}"}}]
+  reasoning_content: None
+  content          : None
+  tokens           : 1640 prompt (1408 cached), 25 completion
+  cost             : 0.000040 GBP
+PASS  the call was accepted
+PASS  the model asked for a tool
+PASS  it asked for the board
+FAIL  reasoning_content came back
+
+--- 2. the second hop, assistant message echoed back whole ---
+  error            : None
+  finish_reason    : stop
+  tool_calls       : null
+  reasoning_content: The board returned zero posts. Reply with {"posts": 0}.
+  content          : {"posts": 0}
+  tokens           : 1710 prompt (1536 cached), 21 completion
+  cost             : 0.000032 GBP
+PASS  the second hop was accepted
+PASS  it answered instead of asking again
+PASS  the answer is a json object
+  (cache hit tokens on the second hop: 1536 — informational)
+
+--- 3. tool_choice=none forces an answer ---
+  error            : None
+  finish_reason    : stop
+  tool_calls       : null
+  reasoning_content: We need answer with json object only. But instruction says call get_bulletin_board with no arguments to see what has bee
+  content          : {"posts":0}
+  tokens           : 104 prompt (0 cached), 593 completion
+  cost             : 0.000275 GBP
+PASS  the forced call was accepted
+PASS  it did not ask for a tool
+
+--- 4. negative control: reasoning_content stripped ---
+  error: None
+  -> it was accepted. Harmless; the loop echoes it anyway.
+
+8 of 9 checks passed
+failed: reasoning_content came back
+
+If a 400 named response_format, set client.JSON_MODE_WITH_TOOLS = False
+and run this again. If it named thinking, stop and decide first.

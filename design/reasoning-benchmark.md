@@ -1,4 +1,10 @@
-# Reasoning benchmark — forty problems in eight levels
+# Reasoning benchmark — forty-problem catalogue, twenty-problem main run
+
+Latest preparation: the main run uses 25 agents and selects levels 1, 3, 6, 8
+from this catalogue (five types per level, 20 problems total). This halves the
+accessible/harder split to 10/10 and retains both ends of the range. The
+catalogue and individual-level selectors below remain unchanged. No live run
+is authorised by this preparation.
 
 The user authorised this replacement on 2026-09-12 after reviewing the original
 five-task easy pilot. The default pool is now forty solvable instances, ordered

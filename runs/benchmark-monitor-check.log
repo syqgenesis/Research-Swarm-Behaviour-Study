@@ -1,0 +1,29 @@
+PASS  a run that has not started yet renders instead of crashing
+PASS  a truncated final line is skipped, not fatal
+PASS  hops are counted as calls but steps are counted once
+PASS  spend is summed over every hop, not just the final one
+PASS  hops per step is reported
+PASS  the parse rate is measured on final records only
+PASS  an agent's own step number is shown
+PASS  silence is timed per agent
+PASS  errors are surfaced
+PASS  an exploit raises an alarm
+PASS  tool adoption is counted per agent
+PASS  an agent that never pulled shows no adoption row
+PASS  memory writes are reported
+PASS  candidates emitted are counted
+PASS  the claimed pool is listed
+PASS  the board feed carries the post
+PASS  codebook words are counted without a regex
+PASS  the stop file is reported as absent
+PASS  and as present once written
+PASS  a round-based log from before hops existed still reads
+PASS  a run that has gone quiet is flagged
+PASS  and says so in the alarms
+PASS  the page embeds the run id it was asked for
+PASS  the page is self-contained, with no external asset
+PASS  the page polls the state endpoint
+PASS  the server exposes exactly the three routes it documents
+PASS  the monitor imports no harness module but config
+
+27 passed, 0 failed

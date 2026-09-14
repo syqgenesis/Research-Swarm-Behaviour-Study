@@ -1,0 +1,119 @@
+<div id="agent-hop-step">
+  <div class="viz-controls">
+    <button type="button" class="btn btn-primary" data-control="play">Play step</button>
+    <button type="button" class="btn" data-control="back" aria-label="Previous moment">Back</button>
+    <button type="button" class="btn" data-control="next" aria-label="Next moment">Next</button>
+    <span class="tabular-nums" data-status aria-live="polite">Step 1 · Opening context</span>
+  </div>
+  <div class="viz-row hop-selector" role="group" aria-label="Jump to a hop">
+    <button type="button" class="btn" data-jump="1" aria-pressed="false">Hop 1 · Read library</button>
+    <button type="button" class="btn" data-jump="5" aria-pressed="false">Hop 2 · Test candidate</button>
+    <button type="button" class="btn" data-jump="9" aria-pressed="false">Hop 3 · Finish</button>
+  </div>
+  <div class="flow-stage" role="group" aria-label="One agent's step. Tool results return to the model for the next hop. Click a node to visit that point.">
+    <svg class="flow-wires" aria-hidden="true"><defs><marker id="hop-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--border)"></path></marker></defs><g data-paths></g><circle data-token r="6" fill="var(--viz-series-1)"></circle></svg>
+    <div class="flow-node" data-node="prompt"><button type="button" class="btn" data-visit="0">Build prompt</button><span class="text-small text-muted">Rules + private context</span></div>
+    <div class="flow-node" data-node="memory"><button type="button" class="btn" data-visit="11">Private memory</button><span class="text-small text-muted">Journal + saved work</span></div>
+    <div class="flow-node" data-node="model"><button type="button" class="btn" data-visit="1">Call model</button><span class="text-small text-muted" data-model-label>One API request</span></div>
+    <div class="flow-node" data-node="reply"><button type="button" class="btn" data-visit="4">Append tool result</button><span class="text-small text-muted">Same conversation</span></div>
+    <div class="flow-node" data-node="decision"><button type="button" class="btn" data-visit="2">Tool requested?</button><span class="text-small text-muted" data-decision-label>Inspect model response</span></div>
+    <div class="flow-node" data-node="tools"><button type="button" class="btn" data-visit="3">Run tool</button><span class="text-small text-muted" data-tool-label>Shared library</span></div>
+    <div class="flow-node" data-node="finish"><button type="button" class="btn" data-visit="11">End step</button><span class="text-small text-muted">Save history + recovery</span></div>
+    <div class="flow-node" data-node="next"><button type="button" class="btn" data-visit="12">Step 2 begins</button><span class="text-small text-muted">Fresh conversation</span></div>
+  </div>
+  <div class="viz-row text-small" aria-label="Playback timeline" data-timeline></div>
+  <div class="text-small selected-detail" data-detail aria-live="polite">Opening context: rules, open problems, private status and selected saved work.</div>
+  <span class="sr-only">Illustrative sequence, not a replay of a recorded run. Other agents continue independently. A tool result stays in this step's conversation. A new model call starts the next hop.</span>
+</div>
+<style>
+#agent-hop-step { color: var(--foreground); }
+#agent-hop-step .hop-selector { margin-top: 12px; }
+#agent-hop-step .flow-stage { position: relative; height: 506px; margin: 12px 0; }
+#agent-hop-step .flow-wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#agent-hop-step .flow-node { position: absolute; display: flex; align-items: center; flex-direction: column; gap: 5px; text-align: center; }
+#agent-hop-step .flow-node > span { max-width: 100%; overflow-wrap: anywhere; }
+#agent-hop-step .flow-node[data-active="true"]::before { content: ""; position: absolute; inset: -7px -3px; background: color-mix(in srgb, var(--viz-series-1) 12%, transparent); border-radius: 8px; z-index: -1; }
+#agent-hop-step .flow-node { isolation: isolate; }
+#agent-hop-step .selected-detail { margin-top: 12px; min-height: 3em; }
+#agent-hop-step .flow-wires text { fill: var(--muted-foreground); }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('agent-hop-step');
+  const q = s => root.querySelector(s);
+  const all = s => [...root.querySelectorAll(s)];
+  const states = [
+    {node:'prompt',hop:0,label:'Step 1 · Opening context',detail:'Opening context: rules, open problems, private status and selected saved work.'},
+    {node:'model',hop:1,edge:'prompt-model',label:'Step 1 · Hop 1 · Model call',detail:'Hop 1: the model requests get_library; peers’ files are not shown automatically.'},
+    {node:'decision',hop:1,edge:'model-decision',label:'Step 1 · Hop 1 · Tool requested',detail:'The response contains a tool call. The step stays open.'},
+    {node:'tools',hop:1,edge:'decision-tools',label:'Step 1 · Hop 1 · Read library',detail:'get_library reads the shared world; the harness records which files were returned.'},
+    {node:'reply',hop:1,edge:'tools-reply',label:'Step 1 · Hop 1 · Result appended',detail:'The assistant response and library result join this same conversation. Hop 1 is complete.'},
+    {node:'model',hop:2,edge:'reply-model',label:'Step 1 · Hop 2 · Model call',detail:'Hop 2: a new API call includes Hop 1’s result. The model requests test_candidates.'},
+    {node:'decision',hop:2,edge:'model-decision',label:'Step 1 · Hop 2 · Tool requested',detail:'Another tool request keeps the same step going; no new opening prompt is built.'},
+    {node:'tools',hop:2,edge:'decision-tools',label:'Step 1 · Hop 2 · Test candidate',detail:'test_candidates checks mathematical validity; testing does not submit or claim the problem.'},
+    {node:'reply',hop:2,edge:'tools-reply',label:'Step 1 · Hop 2 · Result appended',detail:'The candidate-check result joins the conversation. Hop 2 is complete.'},
+    {node:'model',hop:3,edge:'reply-model',label:'Step 1 · Hop 3 · Model call',detail:'Hop 3: the model sees the accumulated results and returns a final note without tool calls.'},
+    {node:'decision',hop:3,edge:'model-decision',label:'Step 1 · Hop 3 · No tool requested',detail:'A normal response with no tool calls ends the hop loop. This example step used 3 model calls.'},
+    {node:'finish',hop:3,edge:'decision-finish',label:'Step 1 · Complete · 3 hops',detail:'The harness records step history; saved research and recovery carry selected work forward.'},
+    {node:'next',hop:0,edge:'finish-next',label:'Step 2 · Fresh conversation',detail:'If no run limit has stopped the agent, Step 2 rebuilds its prompt from current state and memory.'}
+  ];
+  let index = 0, playing = false, timer = null, animation = null, paths = {}, centers = {};
+  const stage = q('.flow-stage'), svg = q('.flow-wires');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ns = 'http://www.w3.org/2000/svg';
+  function element(name, attrs) { const e = document.createElementNS(ns,name); Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v)); return e; }
+  function layout() {
+    const w = stage.clientWidth, left = w * .26, right = w * .76, nw = Math.min(212,w*.45);
+    centers = {prompt:[left,37],memory:[right,37],model:[left,147],reply:[right,147],decision:[left,262],tools:[right,262],finish:[left,380],next:[right,457]};
+    all('[data-node]').forEach(n=>{ const [x,y]=centers[n.dataset.node]; n.style.width=nw+'px'; n.style.left=(x-nw/2)+'px'; n.style.top=(y-18)+'px'; });
+    svg.setAttribute('viewBox',`0 0 ${w} 506`);
+    const half = Math.min(nw/2-5,96);
+    const spec = {
+      'prompt-model':`M ${left} 81 L ${left} 118`,
+      'model-decision':`M ${left} 191 L ${left} 233`,
+      'decision-tools':`M ${left+half} 262 L ${right-half} 262`,
+      'tools-reply':`M ${right} 235 L ${right} 191`,
+      'reply-model':`M ${right-half} 147 L ${left+half} 147`,
+      'decision-finish':`M ${left} 306 L ${left} 351`,
+      'finish-next':`M ${left} 424 L ${left} 457 L ${right-half} 457`,
+      'memory-prompt':`M ${right-half} 37 L ${left+half} 37`
+    };
+    q('[data-paths]').replaceChildren(); paths={};
+    Object.entries(spec).forEach(([key,d])=>{ const p=element('path',{d,fill:'none',stroke:'var(--border)','stroke-width':1.5,'marker-end':'url(#hop-arrow)'}); q('[data-paths]').appendChild(p); paths[key]=p; });
+    [['Yes',(left+right)/2,249],['No',left+14,330]].forEach(([text,x,y])=>{const t=element('text',{x,y,'text-anchor':'middle',class:'text-small'});t.textContent=text;q('[data-paths]').appendChild(t);});
+    render(false);
+  }
+  function render(move=true) {
+    const s=states[index];
+    q('[data-status]').textContent=s.label;
+    q('[data-detail]').textContent=s.detail;
+    q('[data-model-label]').textContent=s.hop ? 'API request '+s.hop+' of 3' : 'One API request';
+    q('[data-tool-label]').textContent=s.hop===2 ? 'Candidate checker' : 'Shared library';
+    q('[data-decision-label]').textContent=s.hop===3 ? 'No tools → end step' : 'Tools → continue';
+    all('[data-node]').forEach(n=>n.dataset.active=String(n.dataset.node===s.node));
+    all('[data-jump]').forEach(b=>b.setAttribute('aria-pressed',String(states[Number(b.dataset.jump)].hop===s.hop && s.hop>0)));
+    q('[data-control="back"]').disabled=index===0;
+    q('[data-control="next"]').disabled=index===states.length-1;
+    q('[data-control="play"]').textContent=playing?'Pause':index===states.length-1?'Replay step':'Play step';
+    q('[data-timeline]').textContent=index===12?'Step 1 complete → Step 2':`Step 1  ·  ${s.hop===0?'Prompt':s.hop===1?'[Hop 1] → Hop 2 → Hop 3':s.hop===2?'Hop 1 → [Hop 2] → Hop 3':'Hop 1 → Hop 2 → [Hop 3]'}`;
+    Object.entries(paths).forEach(([key,p])=>p.setAttribute('stroke',key===s.edge?'var(--viz-series-1)':'var(--border)'));
+    if(animation)cancelAnimationFrame(animation);
+    const token=q('[data-token]'), path=paths[s.edge];
+    if(move && path && !reduced) {
+      const length=path.getTotalLength(); let start;
+      function tick(now) { if(start===undefined)start=now; const t=Math.min((now-start)/650,1), p=path.getPointAtLength(length*t); token.setAttribute('cx',p.x);token.setAttribute('cy',p.y); if(t<1)animation=requestAnimationFrame(tick); }
+      animation=requestAnimationFrame(tick);
+    } else {const [x,y]=centers[s.node];token.setAttribute('cx',x);token.setAttribute('cy',y-27);}
+  }
+  function pause(){playing=false;clearTimeout(timer);timer=null;}
+  function schedule(){timer=setTimeout(()=>{if(index<states.length-1){index++;if(index===states.length-1)pause();render();if(playing)schedule();}},1800);}
+  q('[data-control="play"]').addEventListener('click',()=>{if(playing)pause();else{if(index===states.length-1)index=0;playing=true;schedule();}render(false);});
+  q('[data-control="back"]').addEventListener('click',()=>{pause();index=Math.max(0,index-1);render();});
+  q('[data-control="next"]').addEventListener('click',()=>{pause();index=Math.min(states.length-1,index+1);render();});
+  all('[data-jump]').forEach(b=>b.addEventListener('click',()=>{pause();index=Number(b.dataset.jump);render();}));
+  all('[data-visit]').forEach(b=>b.addEventListener('click',()=>{pause();const n=Number(b.dataset.visit); index=(states[index].hop===2 && n>=1 && n<=4)?n+4:(states[index].hop===3 && (n===1||n===2))?n+8:n;render();}));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){pause();render(false);}});
+  new ResizeObserver(layout).observe(stage);
+  layout();
+})();
+</script>

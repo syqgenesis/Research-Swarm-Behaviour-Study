@@ -1,0 +1,24 @@
+run pull-smoke9: 8 agents running free, 6 steps each, 12 instances, 60 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/pull-smoke9.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 0/0/0/0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 12/12
+    11s  steps 0/0/0/0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 12/12
+    21s  steps 1/1/0/0/1/0/0/0  spend 0.0058 GBP over 11 calls  open 12/12
+    31s  steps 1/2/1/0/1/1/1/0  spend 0.0159 GBP over 27 calls  open 11/12
+    41s  steps 2/2/1/0/1/1/1/0  spend 0.0184 GBP over 31 calls  open 10/12
+    51s  steps 2/2/1/0/1/1/1/0  spend 0.0184 GBP over 31 calls  open 10/12
+    61s  steps 2/2/1/1/2/1/2/0  spend 0.0306 GBP over 44 calls  open 10/12
+    71s  steps 2/3/1/1/2/1/2/0  spend 0.0342 GBP over 49 calls  open 10/12
+    81s  steps 3/4/1/1/2/1/2/0  spend 0.0403 GBP over 58 calls  open 10/12
+    91s  steps 3/4/2/1/2/1/2/1  spend 0.0562 GBP over 69 calls  open 10/12
+   101s  steps 3/5/3/2/2/2/3/1  spend 0.0786 GBP over 92 calls  open 10/12
+   111s  steps 3/6/3/3/2/2/3/1  spend 0.0833 GBP over 101 calls  open 9/12
+   121s  steps 3/6/4/3/2/3/3/1  spend 0.0889 GBP over 110 calls  open 9/12
+   132s  steps 3/6/4/3/2/3/4/1  spend 0.0934 GBP over 116 calls  open 9/12
+   142s  steps 3/6/4/3/3/3/4/1  spend 0.1023 GBP over 122 calls  open 9/12
+   152s  steps 4/6/4/3/3/3/5/1  spend 0.1132 GBP over 131 calls  open 9/12
+   162s  steps 5/6/4/3/4/3/5/2  spend 0.1281 GBP over 145 calls  open 9/12
+   172s  steps 5/6/4/4/5/4/6/3  spend 0.1474 GBP over 167 calls  open 9/12
+   182s  steps 5/6/5/5/6/4/6/4  spend 0.1612 GBP over 183 calls  open 9/12
+   192s  steps 6/6/6/6/6/5/6/4  spend 0.1765 GBP over 199 calls  open 9/12
+   202s  steps 6/6/6/6/6/6/6/5  spend 0.1825 GBP over 206 calls  open 9/12
+run pull-smoke9 finished in 209s. 210 calls, 0.1846 GBP. logs in runs/

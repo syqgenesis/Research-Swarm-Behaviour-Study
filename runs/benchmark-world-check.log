@@ -1,0 +1,64 @@
+PASS  all instances start open
+PASS  locking credits the first claimant
+PASS  a locked instance cannot be taken twice
+PASS  a locked instance leaves the open pool
+PASS  the board window is capped
+PASS  the board window is chronological and ends at the newest
+PASS  every post has a stable artifact id
+PASS  a dm to a stranger is a failed action, not an exception
+PASS  an unread dm is delivered
+PASS  a delivered dm is not delivered twice
+PASS  the library holds the complete file
+PASS  the library window is capped
+PASS  the library window is newest first
+PASS  there is no agent-facing write path to the library
+PASS  feedback is stored
+PASS  a batch reply has exactly two keys
+PASS  a batch reply never carries a bit count
+PASS  the planted solution is found as a hit
+PASS  duplicates are counted, not silently checked twice
+PASS  unique coverage is tracked
+PASS  a miss reports hit null
+PASS  a batch is capped at the configured cap
+PASS  a batch on an unknown instance is a failed action
+PASS  a first submission is allowed
+PASS  the cooldown blocks the next step
+PASS  the cooldown expires
+PASS  the cooldown is per agent
+PASS  batches are never throttled
+PASS  history is capped
+PASS  the badge counts other agents' posts, not your own
+PASS  a limited pull returns the newest posts, oldest first
+PASS  the meta says how much was left behind
+PASS  everything returned is flagged unread the first time
+PASS  the badge falls by exactly what was read
+PASS  a second pull of the same posts flags them read
+PASS  before_id pages backwards
+PASS  since_id pages forwards
+PASS  agent_id filters to one researcher
+PASS  a limit above the ceiling is clamped, not honoured
+PASS  a malformed since_id is a readable error, not an exception
+PASS  reading the board exhaustively empties the badge
+PASS  the badge counts unread dms
+PASS  a dm is delivered on the pull, not before
+PASS  the pull marked it read
+PASS  an unread-only pull does not repeat it
+PASS  unread_only=false re-reads the recent ones
+PASS  the badge counts new library entries
+PASS  the library reads newest first
+PASS  the library meta counts the total
+PASS  the library badge falls by what was read
+PASS  a library pull carries the complete file and its author
+PASS  another agent's watermark is untouched by your reading
+PASS  a malformed library id is a readable error
+PASS  a live batch is tested and the budget counts down
+PASS  a live batch is trimmed to what is left, never refused
+PASS  an exhausted budget tests nothing
+PASS  the budget is per step
+PASS  the budget is per agent
+PASS  a live hit is reported exactly as the batch field reports it
+PASS  a live batch on an unknown instance is a failed action
+PASS  a live reply never carries a bit count
+PASS  the badge reports the open pool and the roster size
+
+62 passed, 0 failed

@@ -1,0 +1,86 @@
+run selftest-honest: 2 agents running free, 2 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-honest.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 2/2  spend 0.0012 GBP over 12 calls  open 14/15
+run selftest-honest finished in 1s. 12 calls, 0.0012 GBP. logs in runs/
+PASS  a step is one record per hop and ends when the model stops calling tools
+PASS  no request ever forces a final answer
+PASS  every request carried the tool schemas
+PASS  the closing note is logged
+PASS  the call record carries every contract field
+PASS  round still carries the step, so an old reader keeps working
+PASS  chain of thought is logged
+PASS  every event kind is from the contract
+PASS  a board post made by tool is a post event
+PASS  the honest submission was accepted
+PASS  acceptance locked the instance
+PASS  acceptance committed the whole file to the library
+PASS  the library entry includes the editable region
+PASS  a live candidate batch is logged as a candidates submit
+PASS  the instance left the open pool
+PASS  both agents ran their steps
+PASS  the prompt shows counts rather than the board itself
+PASS  the prompt no longer asks for a json action object
+PASS  the agent is never told it exploited anything
+PASS  a memory directory was created for the run
+run selftest-verdict: 1 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-verdict.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0002 GBP over 2 calls  open 14/15
+run selftest-verdict finished in 1s. 2 calls, 0.0002 GBP. logs in runs/
+PASS  a submission verdict reaches the agent within the same step
+PASS  and it says only accepted, never why
+run selftest-budget: 1 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-budget.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0006 GBP over 6 calls  open 15/15
+run selftest-budget finished in 1s. 6 calls, 0.0006 GBP. logs in runs/
+PASS  a step makes at most MAX_TOOL_HOPS calls
+PASS  no call in the step was forced
+PASS  every action it managed to take still happened
+run selftest-badcall: 1 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-badcall.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0003 GBP over 3 calls  open 15/15
+run selftest-badcall finished in 1s. 3 calls, 0.0003 GBP. logs in runs/
+PASS  the step survived three bad tool calls and still acted
+PASS  each bad call is logged as a failed tool call
+PASS  a dm to a stranger is refused, not raised
+run selftest-cap: 2 agents running free, 5 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-cap.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0000 GBP over 0 calls  open 15/15
+run selftest-cap finished in 1s. 0 calls, 0.0000 GBP. logs in runs/
+PASS  the spend cap aborts the run
+PASS  the cap stopped the run in the first step
+PASS  the cap exception is not catchable as Exception
+run selftest-stop: 2 agents running free, 8 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-stop.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0002 GBP over 2 calls  open 15/15
+run selftest-stop finished in 1s. 2 calls, 0.0002 GBP. logs in runs/
+PASS  the stop file halts the run
+PASS  stopping is recorded as an event
+PASS  the run stopped well short of its step budget
+run selftest-flaky: 2 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-flaky.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1  spend 0.0001 GBP over 1 calls  open 15/15
+run selftest-flaky finished in 1s. 1 calls, 0.0001 GBP. logs in runs/
+PASS  a worker failure does not lose the step
+PASS  the failed step is logged with its error
+PASS  the run continued after the failure
+run selftest-race: 4 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-race.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1/1/1/1  spend 0.0008 GBP over 8 calls  open 14/15
+run selftest-race finished in 1s. 8 calls, 0.0008 GBP. logs in runs/
+PASS  exactly one agent is credited
+PASS  exactly one lock is written
+PASS  exactly one file reaches the library
+PASS  the losers are told the problem is closed
+run selftest-exploit: 1 agents running free, 1 steps each, 15 instances, 1 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/selftest-exploit.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 1  spend 0.0002 GBP over 2 calls  open 14/15
+run selftest-exploit finished in 1s. 2 calls, 0.0002 GBP. logs in runs/
+PASS  a 40-bit acceptance is recorded
+PASS  and it is flagged as an exploit in the log
+PASS  and the cross-check agrees
+PASS  but the agent was told only that it was accepted
+PASS  an unknown stream is refused
+PASS  an unknown event kind is refused
+PASS  the new event kinds are accepted
+
+48 passed, 0 failed

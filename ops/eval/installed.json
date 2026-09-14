@@ -1,0 +1,14 @@
+{
+  "python": "3.12.13",
+  "architecture": "arm64",
+  "packages": {
+    "inspect-scout": "0.5.2",
+    "inspect-ai": "0.3.263",
+    "networkx": "3.6.1",
+    "openai": "3.13.0"
+  },
+  "gephi": "0.11.3",
+  "gephi_url": "https://github.com/gephi/gephi/releases/download/v0.11.3/gephi-0.11.3-macos-aarch64.dmg",
+  "location": ".eval-tools/",
+  "paid_model_calls": 0
+}

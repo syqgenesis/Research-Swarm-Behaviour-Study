@@ -1,0 +1,28 @@
+run pull-smoke8: 8 agents running free, 6 steps each, 12 instances, 60 min ceiling, cap 5.00 GBP
+  stop it with: touch runs/pull-smoke8.STOP   (or the monitor's Stop button, or Ctrl-C)
+     1s  steps 0/0/0/0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 12/12
+    11s  steps 0/0/0/0/0/0/0/0  spend 0.0000 GBP over 0 calls  open 12/12
+    21s  steps 0/1/0/0/0/0/0/0  spend 0.0028 GBP over 4 calls  open 12/12
+    31s  steps 1/1/0/1/0/1/1/1  spend 0.0182 GBP over 23 calls  open 11/12
+    41s  steps 1/1/1/1/0/1/1/1  spend 0.0221 GBP over 27 calls  open 11/12
+    51s  steps 1/2/1/1/1/1/1/2  spend 0.0342 GBP over 39 calls  open 10/12
+    61s  steps 2/2/1/2/1/2/1/2  spend 0.0450 GBP over 51 calls  open 9/12
+    71s  steps 2/2/2/2/1/2/2/3  spend 0.0581 GBP over 63 calls  open 9/12
+    81s  steps 3/3/2/2/1/2/2/3  spend 0.0663 GBP over 71 calls  open 9/12
+    91s  steps 3/3/2/3/2/2/2/3  spend 0.0766 GBP over 79 calls  open 9/12
+   101s  steps 4/3/3/3/2/2/3/4  spend 0.0942 GBP over 95 calls  open 9/12
+   111s  steps 4/3/3/3/3/3/3/5  spend 0.1095 GBP over 107 calls  open 9/12
+   121s  steps 4/4/3/4/3/3/3/5  spend 0.1190 GBP over 115 calls  open 9/12
+   131s  steps 4/5/3/4/4/4/3/6  spend 0.1365 GBP over 131 calls  open 9/12
+   142s  steps 4/5/3/5/4/4/3/6  spend 0.1399 GBP over 135 calls  open 9/12
+   152s  steps 5/5/3/6/5/5/3/6  spend 0.1597 GBP over 151 calls  open 9/12
+   162s  steps 5/5/4/6/5/6/3/6  spend 0.1740 GBP over 159 calls  open 9/12
+   172s  steps 5/6/4/6/6/6/3/6  spend 0.1835 GBP over 167 calls  open 9/12
+   182s  steps 5/6/4/6/6/6/4/6  spend 0.1934 GBP over 171 calls  open 9/12
+   192s  steps 6/6/4/6/6/6/4/6  spend 0.2020 GBP over 175 calls  open 9/12
+   202s  steps 6/6/5/6/6/6/4/6  spend 0.2099 GBP over 179 calls  open 9/12
+   212s  steps 6/6/5/6/6/6/5/6  spend 0.2167 GBP over 183 calls  open 9/12
+   222s  steps 6/6/6/6/6/6/5/6  spend 0.2215 GBP over 187 calls  open 9/12
+   232s  steps 6/6/6/6/6/6/5/6  spend 0.2215 GBP over 187 calls  open 9/12
+   242s  steps 6/6/6/6/6/6/5/6  spend 0.2215 GBP over 187 calls  open 9/12
+run pull-smoke8 finished in 249s. 191 calls, 0.2279 GBP. logs in runs/

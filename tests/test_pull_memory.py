@@ -163,6 +163,24 @@ class PullChannels(unittest.TestCase):
         # And every failure still produces content the model can read.
         self.assertIn("error", json.loads(broken["content"]))
 
+    def test_checkpoint_is_private_and_reappears_in_its_owner_prompt(self):
+        saved = self.dispatch(
+            "save_checkpoint", problem_id=self.pool[0]["id"],
+            approach="branch on the first undecided vertex",
+            partial_result="vertices 1, 4, 7 remain compatible",
+            checked="verified against all earlier edges",
+            next_action="test vertex 9")
+        self.assertTrue(saved["ok"])
+        receipt = json.loads(saved["content"])
+        self.assertEqual(receipt["checkpoint_id"], 1)
+        own, _, _ = agentloop.build_prompt(self.world, "agent-01", 2, memory=self.memory)
+        peer, _, _ = agentloop.build_prompt(self.world, "agent-02", 2, memory=self.memory)
+        self.assertIn("YOUR LATEST PRIVATE CHECKPOINT", own[1]["content"])
+        self.assertIn("vertices 1, 4, 7 remain compatible", own[1]["content"])
+        self.assertNotIn("vertices 1, 4, 7 remain compatible", peer[1]["content"])
+        hidden = self.dispatch("read_memory", path="checkpoints/00000001.json")
+        self.assertFalse(hidden["ok"])
+
 
 class MemoryFiles(unittest.TestCase):
     def setUp(self):
@@ -307,7 +325,7 @@ class HopLoop(unittest.TestCase):
             out = agentloop.dispatch_tool(self.world, self.memory, "agent-01", 1,
                                           call_of(name, {}))
             self.assertFalse(out["ok"])
-            self.assertIn("handled by the harness", out["error"])
+            self.assertIn("is an action tool", out["error"])
 
     def test_an_api_error_mid_loop_keeps_what_was_already_read(self):
         self.world.post("agent-02", "hello", 1)
