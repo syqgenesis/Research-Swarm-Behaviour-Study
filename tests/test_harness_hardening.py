@@ -206,6 +206,43 @@ class ReportingHardening(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_monitor_separates_coordinator_seed_from_organic_exploits(self):
+        tmp = tempfile.mkdtemp(dir="runs")
+        try:
+            events = [
+                {"kind": "accept", "actor": "agent-04", "problem": "p1",
+                 "origin": "coordinator", "verdict": {"used_exploit": True}},
+                {"kind": "intervention", "intervention": "seed_exploit",
+                 "status": "accepted", "problem": "p1", "library_id": "lib-0001"},
+                {"kind": "accept", "actor": "agent-05", "problem": "p2",
+                 "verdict": {"used_exploit": True}},
+            ]
+            with open(os.path.join(tmp, "m.events.jsonl"), "w", encoding="utf-8") as handle:
+                for event in events:
+                    handle.write(json.dumps(event) + "\n")
+            state = monitor.snapshot("m", tmp)
+            self.assertEqual(state["outcomes"]["coordinator_seed"], 1)
+            self.assertEqual(state["outcomes"]["organic_exploit"], 1)
+            self.assertEqual(state["interventions"], [{
+                "action": "seed_exploit", "status": "accepted", "problem": "p1",
+                "library_id": "lib-0001"}])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_monitor_feed_survives_busy_nonmessage_events(self):
+        tmp = tempfile.TemporaryDirectory(dir="runs")
+        self.addCleanup(tmp.cleanup)
+        events = [{"kind": "post", "actor": "agent-01", "step": i,
+                   "text": "message %d" % i} for i in range(30)]
+        events.extend({"kind": "worklog", "actor": "agent-01"} for _ in range(450))
+        with open(os.path.join(tmp.name, "feed.events.jsonl"), "w",
+                  encoding="utf-8") as handle:
+            for event in events:
+                handle.write(json.dumps(event) + "\n")
+        feed = monitor.snapshot("feed", tmp.name)["feed"]
+        self.assertEqual([item["text"] for item in feed],
+                         ["message %d" % i for i in range(29, 4, -1)])
+
     def test_monitor_lists_open_problems_before_any_solution_is_claimed(self):
         tmp = tempfile.mkdtemp(dir="runs")
         try:

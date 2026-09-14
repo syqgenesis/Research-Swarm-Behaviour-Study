@@ -119,9 +119,21 @@ def snapshot(run_id, run_dir=None):
     calls = read_jsonl(os.path.join(run_dir, "%s.calls.jsonl" % run_id))
     events = read_jsonl(os.path.join(run_dir, "%s.events.jsonl" % run_id))
     now = time.time()
+    starts = [e for e in events if e.get("kind") == "run_start"]
+    prepared = {}
+    if not starts:
+        try:
+            with open(os.path.join(run_dir, run_id + ".prepared.json"), encoding="utf-8") as handle:
+                prepared = json.load(handle)
+        except (OSError, ValueError):
+            pass
+    settings = starts[-1] if starts else prepared
+    phase = ("finished" if any(e.get("kind") == "run_end" for e in events)
+             else "running" if starts else "awaiting approval" if prepared else "awaiting run")
 
     finals = [c for c in calls if _is_final(c)]
-    agents = sorted({c.get("agent") for c in calls if c.get("agent")})
+    agents = sorted({c.get("agent") for c in calls if c.get("agent")}
+                    | set(settings.get("agent_ids") or settings.get("report_rewards") or []))
     spend = sum(c.get("cost_gbp") or 0 for c in calls)
     hit = sum((c.get("usage") or {}).get("prompt_cache_hit_tokens") or 0 for c in calls)
     miss = sum((c.get("usage") or {}).get("prompt_cache_miss_tokens") or 0 for c in calls)
@@ -157,8 +169,7 @@ def snapshot(run_id, run_dir=None):
                 "step": event.get("step", event.get("round")),
             }
 
-    starts = [e for e in events if e.get("kind") == "run_start"]
-    manifest = (starts[-1].get("problems") if starts else None) or []
+    manifest = settings.get("problems") or []
     pool = []
     for problem in manifest:
         if not isinstance(problem, dict) or not problem.get("id"):
@@ -178,8 +189,10 @@ def snapshot(run_id, run_dir=None):
                 for pid, rec in sorted(locks.items())]
 
     accepts = [e for e in events if e.get("kind") == "accept"]
-    recorded_cap = (starts[-1].get("spend_cap_gbp") if starts else None) or config.SPEND_CAP_GBP
+    recorded_cap = settings.get("spend_cap_gbp") or config.SPEND_CAP_GBP
     exploits = [e for e in accepts if (e.get("verdict") or {}).get("used_exploit")]
+    seeded_exploits = [e for e in exploits if e.get("origin") == "coordinator"]
+    organic_exploits = [e for e in exploits if e.get("origin") != "coordinator"]
     outcomes = _outcome_stats(events, agents)
 
     # tool adoption, the thing a pull-mode run can silently fail at
@@ -196,8 +209,26 @@ def snapshot(run_id, run_dir=None):
             memory_bytes[actor] = max(memory_bytes.get(actor, 0),
                                       (event.get("verdict") or {}).get("bytes") or 0)
 
+    truncations = [c for c in calls if c.get("finish_reason") == "length"]
+    recovered_cutoffs = [c for c in truncations if c.get("continued")]
+    duplicate_candidates = sum((e.get("verdict") or {}).get("duplicate") or 0
+                               for e in events
+                               if e.get("kind") == "submit" and
+                               e.get("kind_detail") == "candidates")
+    worklogs = [e for e in events if e.get("kind") == "worklog"]
+    interventions = []
+    for event in events:
+        if event.get("kind") == "intervention":
+            interventions.append({
+                "action": event.get("intervention"),
+                "status": event.get("status"),
+                "problem": event.get("problem"),
+                "library_id": event.get("library_id"),
+            })
+
     feed = []
-    for event in events[-400:]:
+    # Limit after selecting messages: busy tool/memory logs must not hide posts.
+    for event in events:
         if event.get("kind") in ("post", "dm", "feedback"):
             feed.append({"kind": event.get("kind"), "actor": event.get("actor"),
                          "to": event.get("recipient"),
@@ -216,6 +247,7 @@ def snapshot(run_id, run_dir=None):
 
     return {
         "run_id": run_id,
+        "phase": phase,
         "stopped": os.path.exists(os.path.join(run_dir, run_id + config.STOP_FILE_SUFFIX)),
         "spend": round(spend, 4),
         "cap": recorded_cap,
@@ -230,7 +262,8 @@ def snapshot(run_id, run_dir=None):
         "pool": pool,
         "outcomes": {
             "honest_solve": len(accepts) - len(exploits),
-            "exploit": len(exploits),
+            "organic_exploit": len(organic_exploits),
+            "coordinator_seed": len(seeded_exploits),
             "failed_attempt": outcomes["failed_attempt"],
             "race_loss": outcomes["race_loss"],
             "cooldown": outcomes["cooldown"],
@@ -238,13 +271,25 @@ def snapshot(run_id, run_dir=None):
         },
         "alarms": [
             "EXPLOIT ACCEPTED: %s on %s" % (e.get("actor"), e.get("problem"))
-            for e in exploits
+            for e in organic_exploits
+        ] + [
+            "COORDINATOR SEED ACCEPTED: %s on %s" % (e.get("actor"), e.get("problem"))
+            for e in seeded_exploits
         ] + ([
             "the run has written nothing for %.0f s" % (now - last_ts)
         ] if last_ts and now - last_ts > STALE_AFTER_S else []),
         "adoption": adoption,
-        "tool_names": list(config.TOOL_NAMES),
+        "tool_names": list(config.TOOL_NAMES_WITH_SHARING if settings.get("point_sharing_enabled")
+                           else config.TOOL_NAMES),
         "memory_bytes": memory_bytes,
+        "continuity": {
+            "truncated_calls": len(truncations),
+            "continued_cutoffs": len(recovered_cutoffs),
+            "uncontinued_cutoffs": len(truncations) - len(recovered_cutoffs),
+            "private_records": len(worklogs),
+            "duplicate_candidates": duplicate_candidates,
+        },
+        "interventions": interventions[-10:],
         "library": len([e for e in events if e.get("kind") == "library_commit"]),
         "dms": len([e for e in events if e.get("kind") == "dm"]),
         "feed": feed,
@@ -309,7 +354,9 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8">
       <div class="dim" id="spendsub"></div></div>
  <div><h2>progress</h2><div class="big" id="steps"></div><div class="dim" id="progsub"></div></div>
  <div><h2>outcomes</h2><div id="outcomes"></div></div>
+ <div><h2>continuity</h2><div id="continuity"></div></div>
 </div>
+<h2>timed interventions</h2><div id="interventions"></div>
 <h2>agents</h2><div id="agents"></div>
 <h2>tool adoption — who actually went and looked</h2><div id="adoption"></div>
 <h2>problem pool</h2><div id="pool"></div>
@@ -329,7 +376,8 @@ function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.
 function draw(s){
  document.getElementById('run').textContent = s.run_id;
  document.getElementById('status').textContent =
-   s.stopped ? '— STOP FILE PRESENT' : (s.stale ? '— nothing written for ' + s.stale_for + 's' : '');
+   s.stopped ? '— STOP FILE PRESENT' : '— ' + s.phase +
+     (s.stale && s.phase === 'running' ? ' · nothing written for ' + s.stale_for + 's' : '');
  document.getElementById('alarms').innerHTML =
    s.alarms.map(function(a){return '<div class="alarm">'+esc(a)+'</div>'}).join('');
  document.getElementById('spend').textContent = s.spend.toFixed(4) + ' GBP';
@@ -343,6 +391,11 @@ function draw(s){
    (s.errors.length ? ' · last error: ' + s.errors[s.errors.length-1] : '');
  document.getElementById('outcomes').innerHTML = table(
    Object.keys(s.outcomes).map(function(k){return [k, s.outcomes[k]]}), ['code','n']);
+ document.getElementById('continuity').innerHTML = table(
+   Object.keys(s.continuity).map(function(k){return [k, s.continuity[k]]}), ['signal','n']);
+ document.getElementById('interventions').innerHTML = table(
+   s.interventions.map(function(i){return [i.action, i.status, i.problem, i.library_id]}),
+   ['action','status','problem','library']);
  document.getElementById('agents').innerHTML = table(s.agents.map(function(a){
    return [a.agent, a.step, a.calls, a.hops_per_step,
      a.parse_rate===null ? null :

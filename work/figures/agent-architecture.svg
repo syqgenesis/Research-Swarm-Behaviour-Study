@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1250" height="860" viewBox="0 0 1250 860" role="img" aria-labelledby="title desc">
+  <title id="title">Agent architecture: one step and its tool loop</title>
+  <desc id="desc">Build context from rules, problems and private memory, then call the model. If the model requests tools, execute them, append the assistant response including returned reasoning and the tool results, and call the model again within the same step. When finished, save work and end the step. The next step rebuilds context using selected saved work. Normal execution path shown.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M 1 1 L 11 6 L 1 11 z" fill="#334155"/></marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #172b40; text-anchor: middle; }
+      .label { font-size: 27px; font-weight: 600; }
+      .detail { font-size: 21px; fill: #40536a; }
+      .edge-label { font-size: 22px; fill: #334155; }
+      .node { fill: #f3f7fb; stroke: #64788e; stroke-width: 2; }
+      .edge { fill: none; stroke: #334155; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1250" height="860" fill="#ffffff"/>
+  <path class="edge" d="M 365 186 L 365 255"/>
+  <path class="edge" d="M 365 371 L 365 431"/>
+  <path class="edge" d="M 515 500 L 770 500"/>
+  <path class="edge" d="M 975 442 L 975 371"/>
+  <path class="edge" d="M 770 313 L 575 313"/>
+  <path class="edge" d="M 365 569 L 365 646"/>
+  <path class="edge" d="M 155 704 L 64 704 L 64 128 L 155 128"/>
+  <rect class="node" x="155" y="70" width="420" height="116" rx="12"/>
+  <text class="label" x="365" y="119">Build step context</text>
+  <text class="detail" x="365" y="154">Rules · problems · private memory</text>
+  <rect class="node" x="155" y="255" width="420" height="116" rx="12"/>
+  <text class="label" x="365" y="303">Call model</text>
+  <text class="detail" x="365" y="339">One call = one hop</text>
+  <path class="node" d="M 365 431 L 515 500 L 365 569 L 215 500 Z"/>
+  <text class="label" x="365" y="492">Tool calls</text>
+  <text class="label" x="365" y="524">requested?</text>
+  <rect class="node" x="770" y="442" width="410" height="116" rx="12"/>
+  <text class="label" x="975" y="489">Execute tools</text>
+  <text class="detail" x="975" y="526">Read · write · test · submit</text>
+  <rect class="node" x="770" y="247" width="410" height="124" rx="12"/>
+  <text class="label" x="975" y="282">Append model response</text>
+  <text class="label" x="975" y="315">+ tool results</text>
+  <text class="detail" x="975" y="348">Includes returned reasoning</text>
+  <rect class="node" x="155" y="646" width="420" height="116" rx="12"/>
+  <text class="label" x="365" y="695">Save work and end step</text>
+  <text class="detail" x="365" y="730">Retain history + private records</text>
+  <text class="edge-label" x="637" y="482">Yes</text>
+  <text class="edge-label" x="397" y="614">No</text>
+  <text class="edge-label" x="672" y="272">Next hop</text>
+  <text class="detail" x="672" y="298">same step</text>
+  <text class="edge-label" transform="translate(36 420) rotate(-90)">Next step · rebuild context</text>
+  <text class="detail" x="625" y="822">Within a step: keep the conversation. Across steps: carry selected saved work.</text>
+</svg>

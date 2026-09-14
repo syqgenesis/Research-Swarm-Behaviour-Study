@@ -55,6 +55,7 @@ class RecoveryAndCollaboration(unittest.TestCase):
     def cutoff(self, text):
         result = reply("")
         result.update(reasoning_content=text, finish_reason="length")
+        result["assistant_message"]["reasoning_content"] = text
         result["usage"].update(completion_tokens=32000, reasoning_tokens=32000)
         return result
 
@@ -68,11 +69,11 @@ class RecoveryAndCollaboration(unittest.TestCase):
     def test_lost_hard_clique_survives_and_requires_agent_test_and_submission(self):
         self.assertTrue(grader.really_solves(self.candidate, self.problem))
         text = "earlier discarded work " * 10000 + "\n11-clique: " + self.candidate
-        with replace_attr(client, "call_model", scripted(self.cutoff(text))) as api:
+        with replace_attr(client, "call_model", scripted(self.cutoff(text), reply("pause"))) as api:
             turn = self.step()
-        self.assertEqual(api.call_count, 1)
-        self.assertFalse(turn["parse_ok"])
-        self.assertEqual(turn["error"], "model output truncated")
+        self.assertEqual(api.call_count, 2)
+        self.assertTrue(turn["parse_ok"])
+        self.assertIsNone(turn["error"])
         runner._apply_action(self.world, turn, 1)
         self.assertTrue(self.world.is_open(self.problem["id"]))
         self.assertFalse(self.world.board)
@@ -106,18 +107,19 @@ class RecoveryAndCollaboration(unittest.TestCase):
     def test_hit_receipt_survives_later_truncation_without_automatic_filing(self):
         results = [reply(None, tool_calls=[call_of("test_candidates", {
             "task_id": self.problem["id"], "batch": [self.candidate]})]),
-            self.cutoff("More work " * 12000)]
+            self.cutoff("More work " * 12000), reply("pause")]
         with replace_attr(client, "call_model", scripted(*results)):
             turn = self.step()
         saved = self.memory.recovery("agent-01")
         self.assertIn(self.candidate, saved)
         self.assertIn('hit', saved)
-        self.assertEqual(turn["error"], "model output truncated")
+        self.assertIsNone(turn["error"])
         self.assertTrue(self.world.is_open(self.problem["id"]))
         self.assertFalse(self.world.library)
 
     def test_recovery_is_bounded_private_and_not_writable_as_agent_memory(self):
-        with replace_attr(client, "call_model", scripted(self.cutoff("界" * 30000 + "TAIL"))):
+        with replace_attr(client, "call_model", scripted(self.cutoff("界" * 30000 + "TAIL"),
+                                                           reply("pause"))):
             self.step()
         saved = self.memory.recovery("agent-01")
         self.assertLessEqual(len(saved.encode()), config.RECOVERY_MAX_BYTES)
@@ -128,6 +130,42 @@ class RecoveryAndCollaboration(unittest.TestCase):
         old = saved
         self.assertIsNone(self.memory.save_recovery("agent-01", "X" * (config.RECOVERY_MAX_BYTES + 1))[0])
         self.assertEqual(self.memory.recovery("agent-01"), old)
+
+    def test_cutoff_is_continued_with_its_full_assistant_message_and_private_record(self):
+        first = self.cutoff("start branch A; range 1..99; next test CANDIDATE")
+        second = reply("continued")
+
+        def continued(messages, **kwargs):
+            if len(messages) > 2:
+                self.assertEqual(messages[-2]["reasoning_content"], first["reasoning_content"])
+                self.assertEqual(messages[-1]["content"], config.CUTOFF_CONTINUATION)
+            return first if len(messages) == 2 else second
+
+        with replace_attr(client, "call_model", continued):
+            turn = self.step()
+        self.assertIsNone(turn["error"])
+        self.assertEqual(turn["n_calls"], 2)
+        self.assertTrue(turn["hops"][0]["continued"])
+        records = self.memory.research_records("agent-01")
+        self.assertEqual(len(records), 2)
+        stored, why = self.memory.read_research_record("agent-01", records[-1]["record_id"])
+        self.assertIsNone(why)
+        self.assertIn("CANDIDATE", stored["text"])
+
+    def test_second_cutoff_preserves_two_complete_private_records(self):
+        first = self.cutoff("first unfinished branch")
+        second = self.cutoff("second unfinished frontier")
+        with replace_attr(client, "call_model", scripted(first, second)):
+            turn = self.step()
+        self.assertEqual(turn["error"], "model output truncated")
+        self.assertEqual(turn["n_calls"], 2)
+        self.assertTrue(turn["hops"][0]["continued"])
+        records = self.memory.research_records("agent-01")
+        self.assertEqual(len(records), 2)
+        complete, why = self.memory.read_research_record("agent-01", 2)
+        self.assertIsNone(why)
+        self.assertIn("second unfinished frontier", complete["text"])
+        self.assertIn("record 2", self.memory.recovery("agent-01"))
 
     def test_checkpoint_failure_stops_and_preserves_transcript(self):
         with replace_attr(client, "call_model", scripted(self.cutoff("candidate"))), \

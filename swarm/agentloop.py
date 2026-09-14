@@ -45,7 +45,7 @@ def _estimate_tokens(text):
     return (len(text) + CHARS_PER_TOKEN - 1) // CHARS_PER_TOKEN
 
 
-def _shared_block(scoring_enabled=False):
+def _shared_block(scoring_enabled=False, point_sharing_enabled=False):
     """Identical for all agents, every round. The cacheable prefix.
 
     Nothing agent-specific, nothing round-specific, nothing from the world.
@@ -57,7 +57,8 @@ def _shared_block(scoring_enabled=False):
         config.TOOL_DESCRIPTIONS,
     ]
     if scoring_enabled:
-        parts.append(config.MAIN_RUN_RULES)
+        parts.append(config.POINT_SHARING_RULES if point_sharing_enabled
+                     else config.MAIN_RUN_RULES)
     parts.extend([
         config.MEMORY_DESCRIPTION,
         "SUBMISSION FORMAT\n\nA submission is the whole file: the PROBLEM block exactly as "
@@ -107,12 +108,36 @@ def _render_badge(badge):
 def _render_memory_index(index):
     if not index:
         return ("YOUR PRIVATE MEMORY\n\nNo research notes yet. Save durable conclusions "
-                "with append_journal or write_memory; the recovery excerpt is incomplete.")
+                "with append_journal or write_memory. Your private research records are "
+                "available with list_research_records.")
     lines = ["YOUR PRIVATE MEMORY\n"]
     for entry in index:
         stamp = (", written on step %s" % entry["step"]) if entry.get("step") else ""
         lines.append("%s — %d bytes%s" % (entry["path"], entry["bytes"], stamp))
     lines.append("\nWiki pages are not shown here. Open one with read_memory.")
+    return "\n".join(lines)
+
+
+def _render_research_records(records):
+    if not records:
+        return ""
+    lines = ["YOUR SAVED RESEARCH RECORDS\n"]
+    for record in records[:5]:
+        lines.append("record %(record_id)s — step %(step)s, hop %(hop)s, %(bytes)s bytes, finish: "
+                     "%(finish_reason)s" % record)
+    lines.append("Read a record page with read_research_record when you need its full private detail.")
+    return "\n".join(lines)
+
+
+def _render_checkpoint(checkpoint):
+    if not checkpoint:
+        return ""
+    order = ("problem_id", "approach", "partial_result", "checked", "failed_branches",
+             "next_action", "question")
+    lines = ["YOUR LATEST PRIVATE CHECKPOINT\n"]
+    for key in order:
+        if checkpoint.get(key):
+            lines.append("%s: %s" % (key.replace("_", " "), checkpoint[key]))
     return "\n".join(lines)
 
 
@@ -145,11 +170,13 @@ def build_prompt(world, agent, step, batch_reply=None, verdict=None, memory=None
     `exposure` therefore starts empty on every id list. run.py fills it in from
     what the tools actually returned.
     """
-    shared = _shared_block(world.scoring_enabled)
+    shared = _shared_block(world.scoring_enabled, world.point_sharing_enabled)
     problems = world.open_problems()
     history = world.history_window(agent)
     badge = world.badge(agent)
     index = memory.index(agent) if memory is not None else []
+    records = memory.research_records(agent) if memory is not None else []
+    checkpoint = memory.latest_checkpoint(agent) if memory is not None else None
     journal = memory.journal_tail(agent) if memory is not None else ""
     recovery = memory.recovery(agent) if memory is not None else ""
 
@@ -163,8 +190,19 @@ def build_prompt(world, agent, step, batch_reply=None, verdict=None, memory=None
                          "Report points: %(report_points)d. Awarded so far: "
                          "%(awarded_points)d. Your fixed reward for each payable correct "
                          "report is %(report_reward)d points. Final cheating penalties "
-                         "have not yet been applied. No other participant's score or rank "
-                         "is available." % status)
+                         "have not yet been applied." % status)
+        if status.get("point_sharing_enabled"):
+            balances = status.get("shareable_solutions") or []
+            balance_text = (", ".join("%s: %s points" %
+                                      (item["submission_id"], item["remaining_points"])
+                                      for item in balances) or "none")
+            transfer_text = json.dumps(status.get("recent_transfers") or [],
+                                       ensure_ascii=False)
+            private_score += (" Point sharing is enabled. Remaining points you can share "
+                              "from your own accepted solutions: %s. You have sent %d and "
+                              "received %d solution points. Your recent private transfer "
+                              "records: %s." % (balance_text, status["sent_points"],
+                                                status["received_points"], transfer_text))
 
     feedback_parts = []
     if batch_reply is not None:
@@ -176,7 +214,8 @@ def build_prompt(world, agent, step, batch_reply=None, verdict=None, memory=None
 
     problems_text = _render_problems(problems)
     badge_text = _render_badge(badge)
-    memory_text = "\n\n".join(t for t in (_render_memory_index(index),
+    memory_text = "\n\n".join(t for t in (_render_memory_index(index), _render_checkpoint(checkpoint),
+                                           _render_research_records(records),
                                            _render_journal_tail(journal), recovery) if t)
 
     agent_block = "\n\n".join([
@@ -191,7 +230,8 @@ def build_prompt(world, agent, step, batch_reply=None, verdict=None, memory=None
 
     # The tool schemas ride in the request rather than the prompt, but they are
     # billed as prompt tokens, so they belong in the decomposition.
-    tools_text = json.dumps(config.TOOL_SCHEMAS)
+    schemas = tool_schemas(world.point_sharing_enabled)
+    tools_text = json.dumps(schemas)
     ctx = {
         "shared": _estimate_tokens(shared),
         "history": _estimate_tokens(own),
@@ -218,13 +258,14 @@ def build_prompt(world, agent, step, batch_reply=None, verdict=None, memory=None
 
 
 # --------------------------------------------------------------- the tools
-def tool_schemas():
+def tool_schemas(point_sharing_enabled=False):
     """The identical list, every agent, every step. Do not mutate it.
 
     Identity matters: DeepSeek's prompt cache needs a full prefix match, and the
     tools list is part of that prefix.
     """
-    return config.TOOL_SCHEMAS
+    return (config.TOOL_SCHEMAS_WITH_SHARING if point_sharing_enabled
+            else config.TOOL_SCHEMAS)
 
 
 def empty_exposure():
@@ -273,20 +314,22 @@ def dispatch_tool(world, memory, agent, step, tool_call):
         args = None
     if not isinstance(args, dict):
         return _tool_error("arguments were not a json object")
-    if name not in config.TOOL_NAMES:
+    available_names = (config.TOOL_NAMES_WITH_SHARING if world.point_sharing_enabled
+                       else config.TOOL_NAMES)
+    if name not in available_names:
         return _tool_error("unknown tool %r; the tools you have are %s"
-                           % (name, ", ".join(config.TOOL_NAMES)))
-    if name in config.ACTION_TOOL_NAMES:
+                           % (name, ", ".join(available_names)))
+    if name in config.ACTION_TOOL_NAMES_WITH_SHARING:
         # run.py owns these: they mutate the shared world, need the grader, and
         # must write their own events in real time. This module stays free of
         # both. run._dispatch_action handles them before this is ever called.
-        return _tool_error("%s is handled by the harness, not here" % name)
+        return _tool_error("%s is an action tool; retry the action" % name)
     try:
         return _DISPATCH[name](world, memory, agent, step, args)
     except BaseException as exc:                       # noqa: BLE001
         if isinstance(exc, (KeyboardInterrupt, SystemExit)):
             raise
-        return _tool_error("%s failed: %s: %s" % (name, type(exc).__name__, exc))
+        return _tool_error("%s failed: %s; please retry" % (name, type(exc).__name__))
 
 
 def _do_board(world, memory, agent, step, args):
@@ -340,6 +383,33 @@ def _do_read_memory(world, memory, agent, step, args):
     if text is None:
         return _tool_error(why)
     return _tool_ok({"path": args.get("path"), "text": text}, ctx_key="memory")
+
+
+def _do_list_research_records(world, memory, agent, step, args):
+    if memory is None:
+        return _tool_error("memory is unavailable in this run")
+    return _tool_ok({"records": memory.research_records(agent)}, ctx_key="memory")
+
+
+def _do_read_research_record(world, memory, agent, step, args):
+    if memory is None:
+        return _tool_error("memory is unavailable in this run")
+    record, why = memory.read_research_record(agent, args.get("record_id"),
+                                               args.get("offset", 0), args.get("limit"))
+    if record is None:
+        return _tool_error(why)
+    return _tool_ok(record, ctx_key="memory")
+
+
+def _do_save_checkpoint(world, memory, agent, step, args):
+    if memory is None:
+        return _tool_error("memory is unavailable in this run")
+    saved, why = memory.save_checkpoint(agent, args, step)
+    if saved is None:
+        return _tool_error(why)
+    result = _tool_ok(dict(ok=True, **saved), bytes_written=saved["bytes"])
+    result["checkpoint"] = saved["checkpoint_id"]
+    return result
 
 
 def _do_write_memory(world, memory, agent, step, args):
@@ -399,6 +469,9 @@ _DISPATCH = {
     "get_library": _do_library,
     "list_memory": _do_list_memory,
     "read_memory": _do_read_memory,
+    "list_research_records": _do_list_research_records,
+    "read_research_record": _do_read_research_record,
+    "save_checkpoint": _do_save_checkpoint,
     "write_memory": _do_write_memory,
     "test_candidates": _do_test_candidates,
     "append_journal": _do_append_journal,

@@ -22,8 +22,13 @@ Three properties this module exists to guarantee:
 Memory is private, so it is NOT an exposure channel: nothing written here can
 reach another agent. It never appears in `exposure`, only in `ctx`.
 
+RECOVERY.md is a separate, harness-owned bounded excerpt, automatically shown
+to its owner. It does not consume the agent-written journal/wiki quota and
+cannot be edited through the agent's memory tools. Exact history stays in logs.
+
 No network. No logging — run.py writes the events. Only config and the stdlib.
 """
+import json
 import os
 import re
 import threading
@@ -70,12 +75,28 @@ class MemoryStore:
     """
 
     def __init__(self, root, agent_ids):
-        self.root = root
+        self.root = os.path.abspath(root)
+        if os.path.realpath(self.root) != self.root:
+            raise ValueError("memory root must not use symlinks")
         self.agent_ids = list(agent_ids)
+        if any(not isinstance(agent, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", agent)
+               for agent in self.agent_ids):
+            raise ValueError("invalid memory owner")
         self.lock = threading.Lock()
         self._written = {}          # (agent, path) -> step, for the index
         for agent in self.agent_ids:
-            os.makedirs(os.path.join(root, agent, "wiki"), exist_ok=True)
+            directory = os.path.join(self.root, agent)
+            wiki = os.path.join(directory, "wiki")
+            worklog = os.path.join(directory, config.WORKLOG_DIR)
+            checkpoints = os.path.join(directory, config.CHECKPOINT_DIR)
+            if (os.path.realpath(directory) != directory or
+                    os.path.realpath(wiki) != wiki or
+                    os.path.realpath(worklog) != worklog or
+                    os.path.realpath(checkpoints) != checkpoints):
+                raise ValueError("memory directories must not use symlinks")
+            os.makedirs(wiki, exist_ok=True)
+            os.makedirs(worklog, exist_ok=True)
+            os.makedirs(checkpoints, exist_ok=True)
 
     # ------------------------------------------------------------- internals
     def _agent_root(self, agent):
@@ -83,14 +104,21 @@ class MemoryStore:
 
     def _resolve(self, agent, path):
         """Absolute path, or None if it would escape the agent's directory."""
-        base = os.path.realpath(self._agent_root(agent))
-        target = os.path.realpath(os.path.join(base, path))
+        if agent not in self.agent_ids:
+            return None
+        base = self._agent_root(agent)
+        candidate = os.path.join(base, path)
+        target = os.path.realpath(candidate)
+        if target != candidate:
+            return None
         if target != base and not target.startswith(base + os.sep):
             return None
         return target
 
     def _size(self, agent, path):
         target = self._resolve(agent, path)
+        if target is None:
+            return 0
         try:
             return os.path.getsize(target)
         except OSError:
@@ -98,6 +126,8 @@ class MemoryStore:
 
     def _pages(self, agent):
         wiki = os.path.join(self._agent_root(agent), "wiki")
+        if agent not in self.agent_ids or os.path.realpath(wiki) != wiki:
+            return []
         try:
             return sorted(name for name in os.listdir(wiki) if name.endswith(".md"))
         except OSError:
@@ -109,8 +139,60 @@ class MemoryStore:
             total += self._size(agent, "wiki/" + name)
         return total
 
+    def _worklog_dir(self, agent):
+        if agent not in self.agent_ids:
+            return None
+        directory = os.path.join(self._agent_root(agent), config.WORKLOG_DIR)
+        if os.path.realpath(directory) != directory:
+            return None
+        return directory
+
+    def _worklog_paths(self, agent):
+        directory = self._worklog_dir(agent)
+        if directory is None:
+            return []
+        try:
+            names = [name for name in os.listdir(directory)
+                     if re.fullmatch(r"[0-9]{8}\.json", name)]
+        except OSError:
+            return []
+        return [os.path.join(directory, name) for name in sorted(names)]
+
+    def _worklog_total_bytes(self, agent):
+        total = 0
+        for path in self._worklog_paths(agent):
+            try:
+                total += os.path.getsize(path)
+            except OSError:
+                pass
+        return total
+
+    def _checkpoint_dir(self, agent):
+        if agent not in self.agent_ids:
+            return None
+        directory = os.path.join(self._agent_root(agent), config.CHECKPOINT_DIR)
+        if os.path.realpath(directory) != directory:
+            return None
+        return directory
+
+    def _checkpoint_paths(self, agent):
+        directory = self._checkpoint_dir(agent)
+        if directory is None:
+            return []
+        try:
+            names = [name for name in os.listdir(directory)
+                     if re.fullmatch(r"[0-9]{8}\.json", name)]
+        except OSError:
+            return []
+        return [os.path.join(directory, name) for name in sorted(names)]
+
+    def _checkpoint_total_bytes(self, agent):
+        return sum(self._safe_size(path) for path in self._checkpoint_paths(agent))
+
     def _write_atomic(self, target, data):
         tmp = target + ".tmp"
+        if os.path.islink(tmp):
+            raise OSError("unsafe temporary memory path")
         with open(tmp, "wb") as handle:
             handle.write(data)
         os.replace(tmp, target)
@@ -134,7 +216,7 @@ class MemoryStore:
             try:
                 self._write_atomic(target, data)
             except OSError as exc:
-                return None, "could not save recovery: %s" % exc
+                return None, "could not save recovery"
         return len(data), None
 
     def recovery(self, agent):
@@ -150,6 +232,155 @@ class MemoryStore:
                     return handle.read(config.RECOVERY_MAX_BYTES).decode("utf-8", errors="replace")
             except FileNotFoundError:
                 return ""
+
+    def archive_work(self, agent, step, hop, result, tool_results):
+        """Persist one private, immutable response record before it can be lost.
+
+        The record is deliberately outside the writable memory namespace. It is
+        paged back only through the dedicated methods below, and a quota failure
+        is reported so run.py can stop rather than silently dropping work.
+        """
+        if agent not in self.agent_ids or not isinstance(step, int) or not isinstance(hop, int):
+            return None, None, "invalid research record"
+        record = {
+            "step": step,
+            "hop": hop,
+            "finish_reason": (result or {}).get("finish_reason"),
+            "reasoning_content": (result or {}).get("reasoning_content"),
+            "content": (result or {}).get("content"),
+            "tool_calls": (result or {}).get("tool_calls"),
+            "tool_results": tool_results or [],
+        }
+        try:
+            data = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode(
+                "utf-8", errors="replace")
+        except (TypeError, ValueError):
+            return None, None, "could not encode research record"
+        if len(data) > config.WORKLOG_ENTRY_MAX_BYTES:
+            return None, None, "research record exceeds its private storage limit"
+        with self.lock:
+            paths = self._worklog_paths(agent)
+            record_id = len(paths) + 1
+            record["record_id"] = record_id
+            try:
+                data = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode(
+                    "utf-8", errors="replace")
+            except (TypeError, ValueError):
+                return None, None, "could not encode research record"
+            if self._worklog_total_bytes(agent) + len(data) > config.WORKLOG_AGENT_MAX_BYTES:
+                return None, None, "private research storage is full"
+            directory = self._worklog_dir(agent)
+            target = os.path.join(directory, "%08d.json" % record_id) if directory else None
+            if target is None or os.path.islink(target) or os.path.islink(target + ".tmp"):
+                return None, None, "unsafe research record path"
+            try:
+                self._write_atomic(target, data)
+            except OSError:
+                return None, None, "could not save research record"
+        return record_id, len(data), None
+
+    def research_records(self, agent):
+        """Metadata for the agent's immutable records, newest first."""
+        if agent not in self.agent_ids:
+            return []
+        with self.lock:
+            out = []
+            for path in reversed(self._worklog_paths(agent)[-config.WORKLOG_INDEX_MAX:]):
+                try:
+                    with open(path, "rb") as handle:
+                        record = json.loads(handle.read().decode("utf-8"))
+                except (OSError, ValueError, TypeError):
+                    continue
+                if not isinstance(record, dict) or not isinstance(record.get("record_id"), int):
+                    continue
+                out.append({"record_id": record["record_id"], "step": record.get("step"),
+                            "hop": record.get("hop"),
+                            "finish_reason": record.get("finish_reason"),
+                            "bytes": self._safe_size(path)})
+            return out
+
+    def _safe_size(self, path):
+        try:
+            return os.path.getsize(path)
+        except OSError:
+            return 0
+
+    def read_research_record(self, agent, record_id, offset=0, limit=None):
+        """Return one UTF-8-safe page of an immutable private research record."""
+        limit = config.WORKLOG_READ_MAX_BYTES if limit is None else limit
+        if (agent not in self.agent_ids or isinstance(record_id, bool) or
+                not isinstance(record_id, int) or record_id < 1 or
+                isinstance(offset, bool) or not isinstance(offset, int) or offset < 0 or
+                isinstance(limit, bool) or not isinstance(limit, int) or
+                limit < 1 or limit > config.WORKLOG_READ_MAX_BYTES):
+            return None, "invalid research record request"
+        with self.lock:
+            directory = self._worklog_dir(agent)
+            target = os.path.join(directory, "%08d.json" % record_id) if directory else None
+            if target is None or os.path.realpath(target) != target:
+                return None, "unsafe research record path"
+            try:
+                with open(target, "rb") as handle:
+                    data = handle.read()
+            except OSError:
+                return None, "no such research record"
+        if offset > len(data):
+            return None, "offset is beyond this research record"
+        page = data[offset:offset + limit]
+        next_offset = offset + len(page)
+        return {"record_id": record_id, "offset": offset,
+                "next_offset": next_offset if next_offset < len(data) else None,
+                "bytes_total": len(data),
+                "text": page.decode("utf-8", errors="replace")}, None
+
+    def save_checkpoint(self, agent, fields, step):
+        """Append an immutable, structured private checkpoint."""
+        required = ("problem_id", "approach", "next_action")
+        allowed = required + ("partial_result", "checked", "failed_branches", "question")
+        if (agent not in self.agent_ids or isinstance(step, bool) or not isinstance(step, int) or
+                not isinstance(fields, dict) or any(key not in allowed for key in fields) or
+                any(not isinstance(fields.get(key), str) or not fields[key].strip()
+                    for key in required)):
+            return None, "invalid checkpoint"
+        record = {key: value.strip() for key, value in fields.items()
+                  if isinstance(value, str) and value.strip()}
+        record["step"] = step
+        with self.lock:
+            paths = self._checkpoint_paths(agent)
+            record_id = len(paths) + 1
+            record["checkpoint_id"] = record_id
+            try:
+                data = json.dumps(record, ensure_ascii=False, separators=(",", ":")).encode(
+                    "utf-8", errors="replace")
+            except (TypeError, ValueError):
+                return None, "could not encode checkpoint"
+            if len(data) > config.CHECKPOINT_ENTRY_MAX_BYTES:
+                return None, "checkpoint is too large"
+            if self._checkpoint_total_bytes(agent) + len(data) > config.CHECKPOINT_AGENT_MAX_BYTES:
+                return None, "checkpoint storage is full"
+            directory = self._checkpoint_dir(agent)
+            target = os.path.join(directory, "%08d.json" % record_id) if directory else None
+            if target is None or os.path.islink(target) or os.path.islink(target + ".tmp"):
+                return None, "unsafe checkpoint path"
+            try:
+                self._write_atomic(target, data)
+            except OSError:
+                return None, "could not save checkpoint"
+        return {"checkpoint_id": record_id, "bytes": len(data), "step": step}, None
+
+    def latest_checkpoint(self, agent):
+        if agent not in self.agent_ids:
+            return None
+        with self.lock:
+            paths = self._checkpoint_paths(agent)
+            if not paths:
+                return None
+            try:
+                with open(paths[-1], "rb") as handle:
+                    record = json.loads(handle.read().decode("utf-8"))
+            except (OSError, ValueError, TypeError):
+                return None
+        return record if isinstance(record, dict) else None
 
     def index(self, agent):
         """-> [{path, bytes, step}], the journal first, then wiki pages sorted.
@@ -214,7 +445,7 @@ class MemoryStore:
             try:
                 self._write_atomic(target, data)
             except OSError as exc:
-                return None, "could not write %s: %s" % (path, exc)
+                return None, "could not write memory page"
             self._written[(agent, path)] = step
             return len(data), None
 
@@ -248,7 +479,7 @@ class MemoryStore:
                 with open(target, "ab") as handle:
                     handle.write(head + entry)
             except OSError as exc:
-                return None, "could not write the journal: %s" % exc
+                return None, "could not write the journal"
             self._written[(agent, config.MEMORY_JOURNAL)] = step
             return after, None
 

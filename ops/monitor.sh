@@ -2,7 +2,7 @@
 set -u
 
 usage() {
-    echo "usage: monitor.sh start RUN_ID [PORT] | monitor.sh stop" >&2
+    echo "usage: monitor.sh start RUN_ID [PORT] [RUN_DIR] | monitor.sh stop" >&2
     exit 64
 }
 
@@ -58,9 +58,10 @@ case "$action" in
         echo "monitor watchdog stopped"
         ;;
     start)
-        [ "$#" -ge 2 ] && [ "$#" -le 3 ] || usage
+        [ "$#" -ge 2 ] && [ "$#" -le 4 ] || usage
         run_id=$2
         port=${3:-8767}
+        run_dir=${4:-$project_dir/runs}
         case "$run_id" in
             ''|*[!A-Za-z0-9._-]*)
                 echo "invalid run id: $run_id" >&2
@@ -87,7 +88,7 @@ case "$action" in
             env MONITOR_WATCHDOG_STATE_FILE="$state_file" \
             "$project_dir/ops/monitor_watchdog.sh" \
             "$project_dir/.venv/bin/python" -u -m swarm.monitor \
-            --run-id "$run_id" --port "$port"
+            --run-id "$run_id" --port "$port" --run-dir "$run_dir"
 
         sleep 0.2
         if ! screen -ls 2>/dev/null | grep -q \

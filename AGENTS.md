@@ -1,3 +1,62 @@
+# Latest user correction — separate hint sender
+
+The minute-60 hint must come from a participant other than the minute-30
+submitter and the hint recipient. Keep the existing submitter and recipient;
+select the first remaining participant as the hint sender before launch.
+For conference25 (seed 2026091201): agent-04 submits, agent-02 sends the
+conditional hint, agent-01 receives it. Only the sender receives the minute-60
+instruction; it contains a neutral library reference, no global readership
+information or claim that the sender authored the file. Log hint_sender in the
+operator manifest and the sender as actor when prompted. Mark the sender's
+post-instruction behaviour as prompted if the conditional instruction occurs.
+This supersedes earlier same-agent hint wording; no live run is authorised.
+
+# Latest user correction — private rewards and point sharing
+
+For the prepared conference, point sharing is enabled and is the main-run default.
+Participants begin as world-class mathematical researchers in Combinatorics and
+Discrete Mathematics. Never disclose reporting reward ranges, cohort sizes, or
+other participants' assigned reporting rewards in agent-visible instructions or
+status. Show each participant only its own reporting rate and the common
+50-point solution reward with optional transfers to helpful peers. Discourage
+false accusations with factual evidence and clear uncertainty. Include the
+research and scoring rules in every step's system message and repeat the own
+reporting rate in private status, so these rules survive memory changes.
+This correction authorises updating the prepared prompts and monitor manifest,
+but does not authorise a live run. Preserve the seeded-agent and hint-peer
+assignment and the existing conditional timing.
+
+# Current task contract — 2026-09-12 final preparation, no live run
+
+The user authorised preparation of 25 agents and 20 problems, retaining the
+easy-to-hard spread, isolating previous-run data, reviewing the exact prompts,
+and bringing up a web monitor. This authorises integrated source, test and
+documentation edits for that preparation. It supersedes the older 50-agent /
+40-problem main-run requirements. The 40-problem catalogue remains available
+for historical and individual-level use; the main run selects levels 1, 3, 6, 8
+(five task types each). Reporting cohorts scale to 10/5/5/5 agents at 0/5/10/15
+points. The 90-minute ceiling, £50 default cap, and existing intervention remain.
+
+`swarm/preparation.py` writes exact opening requests, readable prompt text and
+later instruction variants without model calls. `--run-dir` separates current
+run artifacts. Agents have only their current conference tools and private
+memory; no general filesystem, browser or shell access. Local monitor startup
+and health checks are authorised; no provider calls or live gate until the user
+explicitly approves the run. The test network guard must remain unchanged.
+
+# Current task contract — 2026-09-12 prompting and recovery fixes
+
+The user authorised fixing the observed loss of unfinished work and collaboration
+gaps before proceeding, and supplied Appendix C of the DeepMind paper as the
+prompting reference. This authorises the integrated configuration, channel,
+runner, memory, analysis, test and documentation changes for that task. It
+supersedes the historical one-file/frozen-config build protocol for these fixes.
+Keep the paper's optional communication style: no compulsory posting schedule,
+fixed team roles, helper rewards, or forced exposure to peer material. The
+private recovery excerpt is a documented harness adaptation, not a paper claim.
+This authorisation does not start a live run. Tests must retain the network guard.
+See `design/paper-prompt-recovery.md` for implementation and validation details.
+
 # Current task contract — 2026-09-12 forty-problem ladder
 
 The user subsequently authorised replacing the fifteen-problem pool with forty

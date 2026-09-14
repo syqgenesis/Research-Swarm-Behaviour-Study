@@ -9,3 +9,10 @@ runs/*.sqlite
 runs/monitor-watchdog.state
 .DS_Store
 .gstack/
+.eval-tools/
+
+# Large research artifacts are published as GitHub release downloads.
+/workspaces/
+/exports/*.zip
+/exports/github-upload/
+/runs/*.log
