@@ -59,6 +59,30 @@ _client = None
 _client_lock = threading.Lock()
 
 
+class ClientSetupError(RuntimeError):
+    """Permanent local client/setup failure that should abort the run immediately."""
+
+
+def validate_runtime_dependencies():
+    """Fail clearly before a paid run when the OpenAI-compatible SDK is missing.
+
+    DeepSeek exposes an OpenAI-compatible HTTP API, so this project uses the
+    ``openai`` Python package purely as the transport SDK while sending requests
+    to ``config.BASE_URL`` (api.deepseek.com). No request is sent to OpenAI.
+    """
+    try:
+        import openai
+    except ModuleNotFoundError as exc:
+        if exc.name != "openai":
+            raise
+        raise ClientSetupError(
+            "Missing Python dependency 'openai'. DeepSeek is still the provider; "
+            "this package is only the OpenAI-compatible SDK used to call "
+            "https://api.deepseek.com. Install it with: python3 -m pip install openai"
+        ) from exc
+    return openai
+
+
 def _sdk_client():
     """Build the SDK client once, on first use. Never logs the key."""
     global _client
@@ -69,7 +93,7 @@ def _sdk_client():
                     "No API key. Put DEEPSEEK_API_KEY=sk-... in secrets.env at the project "
                     "root, or export it in your shell."
                 )
-            import openai  # lazy: see module docstring
+            openai = validate_runtime_dependencies()
 
             _client = openai.OpenAI(
                 base_url=config.BASE_URL,
@@ -268,9 +292,9 @@ def call_model(messages: list, max_tokens: int = 2048,
             if config.THINKING_ENABLED:
                 kwargs["extra_body"] = dict(THINKING_EXTRA_BODY)
             response = _sdk_client().chat.completions.create(**kwargs)
-        except config.SpendCapExceeded:
+        except (config.SpendCapExceeded, ClientSetupError):
             raise
-        except BaseException as exc:  # noqa: BLE001 — every failure is a verdict
+        except BaseException as exc:  # noqa: BLE001 — every provider failure is a verdict
             if isinstance(exc, (KeyboardInterrupt, SystemExit)):
                 raise
             last_error = "%s: %s" % (type(exc).__name__, exc)

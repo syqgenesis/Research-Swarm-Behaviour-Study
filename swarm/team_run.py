@@ -90,6 +90,7 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
     if call_deadline is None:
         call_deadline = deadline
     step = 0
+    consecutive_model_errors = 0
     try:
         while not stop_event.is_set() and time.monotonic() < call_deadline:
             step += 1
@@ -114,7 +115,7 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                         tools=team_agent.tool_schemas(world.reporting_enabled),
                         tool_choice="auto",
                     )
-                except config.SpendCapExceeded as exc:
+                except (config.SpendCapExceeded, client.ClientSetupError) as exc:
                     _record_fatal(world, fatal_errors, fatal_lock, agent_id, step, exc)
                     stop_event.set()
                     return
@@ -150,10 +151,25 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                     break
 
                 if response.get("error"):
-                    summary_lines.append("model call failed; this turn ended")
+                    consecutive_model_errors += 1
+                    summary_lines.append(
+                        f"model call failed ({consecutive_model_errors}/"
+                        f"{team_config.MAX_CONSECUTIVE_MODEL_ERRORS}); this turn ended"
+                    )
                     hit_call_cap = False
+                    if consecutive_model_errors >= team_config.MAX_CONSECUTIVE_MODEL_ERRORS:
+                        exc = RuntimeError(
+                            "aborting after "
+                            f"{consecutive_model_errors} consecutive model-call failures: "
+                            f"{response.get('error')}"
+                        )
+                        memory.save_previous_turn(agent_id, summary_lines)
+                        _record_fatal(world, fatal_errors, fatal_lock, agent_id, step, exc)
+                        stop_event.set()
+                        return
                     break
 
+                consecutive_model_errors = 0
                 messages.append(_assistant_message(response))
                 calls = response.get("tool_calls") or []
                 if not calls:
@@ -519,6 +535,16 @@ def main(argv=None):
         help="optional unique local run directory name; a timestamped name is used if omitted",
     )
     args = parser.parse_args(argv)
+    if not config.API_KEY:
+        raise SystemExit(
+            "No API key. Put DEEPSEEK_API_KEY=sk-... in secrets.env at the project "
+            "root, or export it in your shell."
+        )
+    # Real CLI runs preflight the local DeepSeek transport SDK before creating artifacts.
+    try:
+        client.validate_runtime_dependencies()
+    except client.ClientSetupError as exc:
+        raise SystemExit(str(exc)) from exc
     result = run_experiment(
         n_agents=args.agents,
         minutes=args.minutes,

@@ -436,6 +436,54 @@ class TeamExperimentTests(unittest.TestCase):
         self.assertEqual(metrics["safety_signals"]["privileged_solution_use_agents"], ["agent-01"])
 
 
+    def test_missing_sdk_fails_before_creating_run_artifacts(self):
+        original = team_run.client.validate_runtime_dependencies
+        try:
+            def fail_dependency_check():
+                raise team_run.client.ClientSetupError("missing sdk")
+
+            team_run.client.validate_runtime_dependencies = fail_dependency_check
+            root = os.path.join(self.tmp.name, "sdk-preflight")
+            with self.assertRaises(SystemExit) as raised:
+                team_run.main([
+                    "--agents", "2", "--minutes", "1",
+                    "--run-root", root, "--run-name", "should-not-exist",
+                ])
+            self.assertIn("missing sdk", str(raised.exception))
+        finally:
+            team_run.client.validate_runtime_dependencies = original
+        self.assertFalse(os.path.exists(os.path.join(root, "should-not-exist")))
+
+    def test_repeated_model_errors_abort_instead_of_spinning(self):
+        calls_made = []
+        stop_event = threading.Event()
+        fatal_errors = []
+
+        def fake_call_model(messages, max_tokens=2048, tools=None, tool_choice=None):
+            calls_made.append(1)
+            return {
+                "content": None, "reasoning_content": None, "usage": {}, "cost_gbp": 0.0,
+                "latency_s": 0.0, "error": "provider setup failed", "finish_reason": None,
+                "tool_calls": None, "assistant_message": None,
+            }
+
+        log_path = os.path.join(self.tmp.name, "failed-calls.jsonl")
+        original_call_model = team_run.client.call_model
+        team_run.client.call_model = fake_call_model
+        try:
+            now = time.monotonic()
+            team_run._run_agent(
+                self.world, self.memory, "agent-01", now + 30, stop_event,
+                log_path, threading.Lock(), 3, 1000, 0.0, fatal_errors, threading.Lock(),
+                call_deadline=now + 30,
+            )
+        finally:
+            team_run.client.call_model = original_call_model
+        self.assertEqual(len(calls_made), team_config.MAX_CONSECUTIVE_MODEL_ERRORS)
+        self.assertTrue(stop_event.is_set())
+        self.assertEqual(len(fatal_errors), 1)
+        self.assertIn("consecutive model-call failures", fatal_errors[0])
+
     def test_call_cutoff_prevents_new_model_calls_before_hard_deadline(self):
         calls_made = []
 
