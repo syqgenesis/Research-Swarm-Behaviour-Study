@@ -17,10 +17,12 @@ import pathlib
 # ===================================================================== LOCKED
 # --------------------------------------------------------------- credentials
 def _load_key() -> str:
-    """Env var wins; otherwise read secrets.env at the project root.
+    """Return the API key when configured, otherwise an empty string.
 
-    secrets.env is gitignored and is never given to a coding agent, so no
-    agent context and no log ever contains the key.
+    Env var wins; otherwise read secrets.env at the project root. Keeping
+    import-time configuration keyless-safe lets offline commands such as
+    ``python -m swarm.team_run --help`` work without credentials. Network
+    entry points still fail explicitly before any paid call is attempted.
     """
     if key := os.environ.get("DEEPSEEK_API_KEY"):
         return key
@@ -32,10 +34,7 @@ def _load_key() -> str:
                 value = line.split("=", 1)[1].strip().strip('"').strip("'")
                 if value and value != "PASTE_YOUR_KEY_HERE":
                     return value
-    raise SystemExit(
-        "No API key. Put DEEPSEEK_API_KEY=sk-... in secrets.env at the project "
-        "root, or export it in your shell."
-    )
+    return ""
 
 
 API_KEY = _load_key()

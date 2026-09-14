@@ -12,3 +12,6 @@ runs/
 # macOS / local tooling
 .DS_Store
 .gstack/
+
+# Misc
+*.patch

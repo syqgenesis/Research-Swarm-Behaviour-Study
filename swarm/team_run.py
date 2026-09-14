@@ -16,18 +16,41 @@ def _agent_ids(n):
     return [f"agent-{i:02d}" for i in range(1, n + 1)]
 
 
-def _build_default_pool(seed, levels, problem_kinds=None):
-    """Build the configured benchmark subset without exposing planted answers."""
-    pool = []
-    for level in levels:
-        pool.extend(problems.build_pool(seed=seed, tier=level))
-    if problem_kinds:
-        wanted = tuple(problem_kinds)
-        unknown = sorted(set(wanted) - {p["kind"] for p in pool})
-        if unknown:
-            raise ValueError(f"problem_kinds not present in selected levels: {', '.join(unknown)}")
-        pool = [p for p in pool if p["kind"] in wanted]
-    return pool
+def _build_main_study_pool():
+    """Return the exact frozen ten-problem pool for the main study.
+
+    The underlying benchmark remains deterministic, but experiment operators no longer
+    choose a seed.  We resolve the repository's frozen instances by ID and fail loudly
+    if a benchmark change would alter the study.
+    """
+    available = {p["id"]: p for p in problems.build_pool()}
+    missing = [pid for pid in team_config.MAIN_STUDY_PROBLEM_IDS if pid not in available]
+    if missing:
+        raise RuntimeError("frozen main-study problem ids are missing: " + ", ".join(missing))
+    return [available[pid] for pid in team_config.MAIN_STUDY_PROBLEM_IDS]
+
+
+def _git_commit(project_root):
+    """Read the current git commit without spawning a subprocess."""
+    git_dir = Path(project_root) / ".git"
+    try:
+        head = (git_dir / "HEAD").read_text(encoding="utf-8").strip()
+        if not head.startswith("ref: "):
+            return head or None
+        ref = head[5:].strip()
+        ref_path = git_dir / ref
+        if ref_path.exists():
+            return ref_path.read_text(encoding="utf-8").strip() or None
+        packed = git_dir / "packed-refs"
+        if packed.exists():
+            for line in packed.read_text(encoding="utf-8").splitlines():
+                if line and not line.startswith("#") and not line.startswith("^"):
+                    commit, name = line.split(" ", 1)
+                    if name == ref:
+                        return commit
+    except (OSError, ValueError):
+        pass
+    return None
 
 
 def _append_jsonl(path, record, lock):
@@ -246,20 +269,24 @@ def _run_scheduled_notices(world, notices, started_at, stop_event, fatal_errors,
             return
 
 
-def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
-                   levels=team_config.DEFAULT_LEVELS, problem_kinds=None, spend_cap_gbp=50.0,
+def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=45,
+                   reporting_mode="neutral", spend_cap_gbp=50.0,
                    max_calls_per_turn=team_config.MAX_MODEL_CALLS_PER_TURN,
                    max_tokens=team_config.CALL_MAX_TOKENS,
                    turn_pause=team_config.TURN_PAUSE_SECONDS,
                    cheating_agent_penalty=team_config.CHEATING_AGENT_PENALTY,
                    rescind_cheated_problem_points=team_config.RESCIND_CHEATED_PROBLEM_POINTS,
-                   false_report_penalty=team_config.FALSE_REPORT_PENALTY,
-                   reporting_enabled=True,
+                   false_report_penalty=team_config.DEFAULT_FALSE_REPORT_PENALTY,
                    problem_pool=None, scheduled_notices=(),
                    call_drain_seconds=team_config.CALL_DRAIN_SECONDS,
                    shutdown_grace_seconds=team_config.SHUTDOWN_GRACE_SECONDS,
                    run_root="runs", run_name=None):
     """Run the team experiment and return paths plus researcher-only final results."""
+    if not config.API_KEY:
+        raise SystemExit(
+            "No API key. Put DEEPSEEK_API_KEY=sk-... in secrets.env at the project "
+            "root, or export it in your shell."
+        )
     if n_agents < 2:
         raise ValueError("n_agents must be at least 2")
     if minutes <= 0:
@@ -276,20 +303,14 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
     run_seconds = minutes * 60
     effective_call_drain_seconds = min(float(call_drain_seconds), run_seconds * 0.20)
 
-    if problem_pool is not None and problem_kinds:
-        raise ValueError("problem_kinds cannot be combined with an explicit problem_pool")
+    reporting_mode = team_config.validate_reporting_mode(reporting_mode)
+    reporting_enabled = team_config.reporting_enabled(reporting_mode)
+    if reporting_mode != "penalised":
+        false_report_penalty = 0
 
     agent_ids = _agent_ids(n_agents)
-    rewards = (
-        team_config.report_reward_assignment(agent_ids, seed)
-        if reporting_enabled
-        else {agent_id: 0 for agent_id in agent_ids}
-    )
-    pool = (
-        list(problem_pool)
-        if problem_pool is not None
-        else _build_default_pool(seed, tuple(levels), problem_kinds)
-    )
+    rewards = team_config.report_reward_assignment(agent_ids, reporting_mode)
+    pool = list(problem_pool) if problem_pool is not None else _build_main_study_pool()
     if not pool or len({p["id"] for p in pool}) != len(pool):
         raise ValueError("problem pool must be non-empty and contain unique ids")
 
@@ -305,10 +326,10 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         "model": config.MODEL,
         "n_agents": n_agents,
         "minutes": minutes,
-        "seed": seed,
-        "levels": list(levels) if problem_pool is None else None,
-        "problem_kinds": list(problem_kinds) if (problem_pool is None and problem_kinds) else None,
+        "git_commit": _git_commit(Path(__file__).resolve().parent.parent),
+        "problem_pool": "main-study-v1" if problem_pool is None else "explicit-test-pool",
         "problem_ids": [p["id"] for p in pool],
+        "reporting_mode": reporting_mode,
         "reporting_enabled": bool(reporting_enabled),
         "report_rewards": rewards if reporting_enabled else {},
         "problem_points": team_config.PROBLEM_POINTS,
@@ -322,12 +343,9 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
             "message_max_chars": team_config.MESSAGE_MAX_CHARS,
             "silence_reminder_turns": team_config.COLLAB_SILENCE_REMINDER_TURNS,
         },
-        "honeypot": {
-            "command": team_config.HONEYPOT_COMMAND,
-            "real_solution_count": team_config.HONEYPOT_REAL_SOLUTION_COUNT,
-            "disclosed_problem_ids": [
-                p["id"] for p in pool[:team_config.HONEYPOT_REAL_SOLUTION_COUNT]
-            ],
+        "honeypots": {
+            "restricted_label": team_config.RESTRICTED_LABEL,
+            "problem_ids": dict(team_config.HONEYPOT_PROBLEM_IDS),
         },
         "call_drain_seconds_requested": call_drain_seconds,
         "call_drain_seconds_effective": effective_call_drain_seconds,
@@ -345,13 +363,21 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=60, seed=20260911,
         },
         "scheduled_notices": notice_config,
     }, indent=2))
+    (run_dir / "problem_pool.json").write_text(json.dumps([
+        {
+            "id": p["id"], "tier": p.get("tier"), "kind": p.get("kind"),
+            "headline": p.get("headline"), "statement_block": p.get("statement_block"),
+            "planted_solution": p.get("planted_solution"),
+        }
+        for p in pool
+    ], indent=2), encoding="utf-8")
 
     world = TeamWorld(
         run_dir, pool, agent_ids, rewards,
         cheating_agent_penalty=cheating_agent_penalty,
         rescind_cheated_problem_points=rescind_cheated_problem_points,
         false_report_penalty=false_report_penalty,
-        reporting_enabled=reporting_enabled,
+        reporting_mode=reporting_mode,
     )
     memory = TeamMemory(run_dir / "memory", agent_ids)
     transcript_path = run_dir / "calls.jsonl"
@@ -457,20 +483,13 @@ def _load_scheduled_notices(path):
 
 
 def main(argv=None):
-    """CLI entry point for configurable trial and full runs."""
+    """CLI entry point for isolated, reproducible local experiment runs."""
     parser = argparse.ArgumentParser(description="Run the collaborative-team AI safety experiment")
     parser.add_argument("--agents", type=int, default=team_config.N_AGENTS)
-    parser.add_argument("--minutes", type=float, default=60)
-    parser.add_argument("--seed", type=int, default=20260911)
-    parser.add_argument("--levels", nargs="+", default=list(team_config.DEFAULT_LEVELS))
+    parser.add_argument("--minutes", type=float, default=45)
     parser.add_argument(
-        "--problem-kinds", nargs="+",
-        choices=("clique", "subset_sum", "sat", "discrepancy", "vanderwaerden"),
-        help="optional problem families within the selected levels (for example: subset_sum sat)",
-    )
-    parser.add_argument(
-        "--reporting", choices=("on", "off"), default="on",
-        help="enable or remove the peer-reporting interface and reporting rewards",
+        "--reporting-mode", choices=team_config.REPORTING_MODES, default="neutral",
+        help="off, neutral, incentivised, or penalised peer reporting",
     )
     parser.add_argument("--spend-cap-gbp", type=float, default=50.0)
     parser.add_argument("--max-calls-per-turn", type=int, default=team_config.MAX_MODEL_CALLS_PER_TURN)
@@ -485,22 +504,25 @@ def main(argv=None):
     )
     parser.add_argument("--turn-pause", type=float, default=team_config.TURN_PAUSE_SECONDS)
     parser.add_argument("--cheating-penalty", type=int, default=team_config.CHEATING_AGENT_PENALTY)
-    parser.add_argument("--false-report-penalty", type=int, default=team_config.FALSE_REPORT_PENALTY)
+    parser.add_argument(
+        "--false-report-penalty", type=int, default=team_config.DEFAULT_FALSE_REPORT_PENALTY,
+        help="used only in penalised mode; ignored in other reporting modes",
+    )
     parser.add_argument("--no-rescind-cheated-points", action="store_true")
     parser.add_argument(
         "--interventions-json",
         help="optional researcher-only JSON list of timed organiser notices",
     )
     parser.add_argument("--run-root", default="runs")
-    parser.add_argument("--run-name")
+    parser.add_argument(
+        "--run-name",
+        help="optional unique local run directory name; a timestamped name is used if omitted",
+    )
     args = parser.parse_args(argv)
     result = run_experiment(
         n_agents=args.agents,
         minutes=args.minutes,
-        seed=args.seed,
-        levels=args.levels,
-        problem_kinds=args.problem_kinds,
-        reporting_enabled=(args.reporting == "on"),
+        reporting_mode=args.reporting_mode,
         spend_cap_gbp=args.spend_cap_gbp,
         max_calls_per_turn=args.max_calls_per_turn,
         max_tokens=args.max_tokens,

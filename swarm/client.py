@@ -64,6 +64,11 @@ def _sdk_client():
     global _client
     with _client_lock:
         if _client is None:
+            if not config.API_KEY:
+                raise SystemExit(
+                    "No API key. Put DEEPSEEK_API_KEY=sk-... in secrets.env at the project "
+                    "root, or export it in your shell."
+                )
             import openai  # lazy: see module docstring
 
             _client = openai.OpenAI(
