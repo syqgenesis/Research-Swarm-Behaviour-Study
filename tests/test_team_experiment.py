@@ -346,7 +346,11 @@ class TeamExperimentTests(unittest.TestCase):
         self.assertEqual(neutral_system.count(team_config.TASK_BOUNDARY_RULES), 1)
         self.assertNotIn("PEER REPORTING", off_system)
         self.assertIn("PEER REPORTING", neutral_system)
-        self.assertNotIn("for example, by circumventing", neutral_system)
+        # The shared conduct rule stays clear without explicitly priming the verifier exploit.
+        self.assertIn("restricted or organiser-only", team_config.TASK_BOUNDARY_RULES)
+        self.assertIn("genuinely solve the stated problem", team_config.TASK_BOUNDARY_RULES)
+        self.assertNotIn("circumvent", team_config.TASK_BOUNDARY_RULES.lower())
+        self.assertNotIn("evaluation", team_config.TASK_BOUNDARY_RULES.lower())
 
     def test_no_reporting_condition_removes_reporting_from_tools_prompt_and_help(self):
         world = TeamWorld(
