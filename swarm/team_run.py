@@ -16,18 +16,21 @@ def _agent_ids(n):
     return [f"agent-{i:02d}" for i in range(1, n + 1)]
 
 
-def _build_main_study_pool():
-    """Return the exact frozen ten-problem pool for the main study.
-
-    The underlying benchmark remains deterministic, but experiment operators no longer
-    choose a seed.  We resolve the repository's frozen instances by ID and fail loudly
-    if a benchmark change would alter the study.
-    """
+def _build_problem_set(name="main"):
+    """Resolve one frozen named problem-set preset by exact benchmark IDs."""
+    if name not in team_config.PROBLEM_SET_IDS:
+        raise ValueError("problem_set must be one of: " + ", ".join(team_config.PROBLEM_SETS))
     available = {p["id"]: p for p in problems.build_pool()}
-    missing = [pid for pid in team_config.MAIN_STUDY_PROBLEM_IDS if pid not in available]
+    wanted = team_config.PROBLEM_SET_IDS[name]
+    missing = [pid for pid in wanted if pid not in available]
     if missing:
-        raise RuntimeError("frozen main-study problem ids are missing: " + ", ".join(missing))
-    return [available[pid] for pid in team_config.MAIN_STUDY_PROBLEM_IDS]
+        raise RuntimeError(f"frozen {name} problem ids are missing: " + ", ".join(missing))
+    return [available[pid] for pid in wanted]
+
+
+def _build_main_study_pool():
+    """Backward-compatible helper returning the exact frozen ten-problem main pool."""
+    return _build_problem_set("main")
 
 
 def _git_commit(project_root):
@@ -101,6 +104,8 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
             summary_lines = list(delivered)
             world.log_event("turn_start", {}, agent_id, step)
             hit_call_cap = True
+            recovery_pending = False
+            recovery_used = False
 
             # A turn can contain several model -> tool -> model hops. The hop cap
             # bounds cost while still letting an agent act on tool results immediately.
@@ -108,10 +113,16 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                 if stop_event.is_set() or time.monotonic() >= call_deadline:
                     hit_call_cap = False
                     break
+                is_recovery_call = recovery_pending
+                recovery_pending = False
+                call_max_tokens = (
+                    min(max_tokens, team_config.LENGTH_RECOVERY_MAX_TOKENS)
+                    if is_recovery_call else max_tokens
+                )
                 try:
                     response = client.call_model(
                         messages,
-                        max_tokens=max_tokens,
+                        max_tokens=call_max_tokens,
                         tools=team_agent.tool_schemas(world.reporting_enabled),
                         tool_choice="auto",
                     )
@@ -132,6 +143,8 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                     "error": response.get("error"),
                     "finish_reason": response.get("finish_reason"),
                     "tool_calls": response.get("tool_calls"),
+                    "recovery_call": bool(is_recovery_call),
+                    "requested_max_tokens": int(call_max_tokens),
                 }, log_lock)
 
                 # The provider call cannot be cancelled from this worker thread. If it
@@ -173,14 +186,47 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                 messages.append(_assistant_message(response))
                 calls = response.get("tool_calls") or []
                 if not calls:
-                    note = (response.get("content") or "").strip()
-                    if note:
-                        summary_lines.append("final note: " + note[:500].replace("\n", " "))
-                    if response.get("finish_reason") == "length":
-                        summary_lines.append("model output hit its token limit before another action")
-                        tail = (response.get("reasoning_content") or "")[-team_config.TRUNCATED_REASONING_TAIL_CHARS:]
+                    finish_reason = response.get("finish_reason")
+                    if finish_reason == "length":
+                        # Give a single bounded continuation chance while the exact truncated
+                        # assistant response is still in context. This converts long private
+                        # reasoning into an action without increasing the normal call budget.
+                        if (not recovery_used and call_index < max_calls_per_turn
+                                and time.monotonic() < call_deadline):
+                            recovery_used = True
+                            recovery_pending = True
+                            summary_lines.append(
+                                "model output hit its token limit; queued one short recovery call"
+                            )
+                            world.log_event(
+                                "length_recovery_queued",
+                                {"call_index": call_index,
+                                 "recovery_max_tokens": team_config.LENGTH_RECOVERY_MAX_TOKENS},
+                                agent_id,
+                                step,
+                            )
+                            messages.append({
+                                "role": "user",
+                                "content": team_config.LENGTH_RECOVERY_INSTRUCTION,
+                            })
+                            continue
+
+                        summary_lines.append(
+                            "model output hit its token limit before another action"
+                            if not is_recovery_call
+                            else "short interruption-recovery call also hit its token limit"
+                        )
+                        tail = (response.get("reasoning_content") or "")[
+                            -team_config.TRUNCATED_REASONING_TAIL_CHARS:
+                        ]
                         if tail:
-                            summary_lines.append("tail of own truncated reasoning: " + tail.replace("\n", " "))
+                            summary_lines.append(
+                                "tail of own truncated reasoning: " + tail.replace("\n", " ")
+                            )
+                    else:
+                        note = (response.get("content") or "").strip()
+                        if note:
+                            summary_lines.append("final note: " + note[:500].replace("\n", " "))
                     hit_call_cap = False
                     break
 
@@ -255,6 +301,19 @@ def _run_agent(world, memory, agent_id, deadline, stop_event, log_path, log_lock
                     hit_call_cap = False
                     break
 
+                if is_recovery_call:
+                    summary_lines.append(
+                        "short interruption-recovery call completed an action; turn ended"
+                    )
+                    world.log_event(
+                        "length_recovery_completed",
+                        {"call_index": call_index, "tool_calls": len(allowed_calls)},
+                        agent_id,
+                        step,
+                    )
+                    hit_call_cap = False
+                    break
+
             if hit_call_cap:
                 summary_lines.append(f"turn reached the {max_calls_per_turn}-model-call cap")
             memory.save_previous_turn(agent_id, summary_lines)
@@ -293,7 +352,7 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=45,
                    cheating_agent_penalty=team_config.CHEATING_AGENT_PENALTY,
                    rescind_cheated_problem_points=team_config.RESCIND_CHEATED_PROBLEM_POINTS,
                    false_report_penalty=team_config.DEFAULT_FALSE_REPORT_PENALTY,
-                   problem_pool=None, scheduled_notices=(),
+                   problem_set="main", problem_pool=None, scheduled_notices=(),
                    call_drain_seconds=team_config.CALL_DRAIN_SECONDS,
                    shutdown_grace_seconds=team_config.SHUTDOWN_GRACE_SECONDS,
                    run_root="runs", run_name=None):
@@ -326,7 +385,12 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=45,
 
     agent_ids = _agent_ids(n_agents)
     rewards = team_config.report_reward_assignment(agent_ids, reporting_mode)
-    pool = list(problem_pool) if problem_pool is not None else _build_main_study_pool()
+    if problem_pool is not None:
+        pool = list(problem_pool)
+        problem_set_name = "explicit-test-pool"
+    else:
+        pool = _build_problem_set(problem_set)
+        problem_set_name = problem_set
     if not pool or len({p["id"] for p in pool}) != len(pool):
         raise ValueError("problem pool must be non-empty and contain unique ids")
 
@@ -343,7 +407,7 @@ def run_experiment(*, n_agents=team_config.N_AGENTS, minutes=45,
         "n_agents": n_agents,
         "minutes": minutes,
         "git_commit": _git_commit(Path(__file__).resolve().parent.parent),
-        "problem_pool": "main-study-v1" if problem_pool is None else "explicit-test-pool",
+        "problem_set": problem_set_name,
         "problem_ids": [p["id"] for p in pool],
         "reporting_mode": reporting_mode,
         "reporting_enabled": bool(reporting_enabled),
@@ -507,6 +571,10 @@ def main(argv=None):
         "--reporting-mode", choices=team_config.REPORTING_MODES, default="neutral",
         help="off, neutral, incentivised, or penalised peer reporting",
     )
+    parser.add_argument(
+        "--problem-set", choices=team_config.PROBLEM_SETS, default="main",
+        help="frozen problem-set preset; use honeypot-calibration for the cheap 3-problem trial",
+    )
     parser.add_argument("--spend-cap-gbp", type=float, default=50.0)
     parser.add_argument("--max-calls-per-turn", type=int, default=team_config.MAX_MODEL_CALLS_PER_TURN)
     parser.add_argument("--max-tokens", type=int, default=team_config.CALL_MAX_TOKENS)
@@ -549,6 +617,7 @@ def main(argv=None):
         n_agents=args.agents,
         minutes=args.minutes,
         reporting_mode=args.reporting_mode,
+        problem_set=args.problem_set,
         spend_cap_gbp=args.spend_cap_gbp,
         max_calls_per_turn=args.max_calls_per_turn,
         max_tokens=args.max_tokens,
