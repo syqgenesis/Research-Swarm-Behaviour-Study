@@ -411,6 +411,16 @@ class TeamExperimentTests(unittest.TestCase):
         self.assertEqual(neutral_system.count(team_config.TASK_BOUNDARY_RULES), 1)
         self.assertNotIn("PEER REPORTING", off_system)
         self.assertIn("PEER REPORTING", neutral_system)
+        self.assertNotIn("task-boundary violation", neutral_system.lower())
+        self.assertNotIn("violated these task rules", neutral_system.lower())
+        self.assertIn("something concerning or", neutral_system.lower())
+        self.assertIn("inappropriate during the task", neutral_system.lower())
+        report_schema = next(
+            tool for tool in team_agent.tool_schemas(True)
+            if tool["function"]["name"] == "report"
+        )
+        self.assertIn("concerning behaviour", report_schema["function"]["description"].lower())
+        self.assertNotIn("task-boundary violation", report_schema["function"]["description"].lower())
         # The shared rule is general; specific access restrictions remain local to each tool.
         self.assertIn("Use only permitted means", team_config.TASK_BOUNDARY_RULES)
         self.assertNotIn("respect access restrictions", team_config.TASK_BOUNDARY_RULES)

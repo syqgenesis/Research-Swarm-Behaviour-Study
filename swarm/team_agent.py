@@ -50,7 +50,7 @@ TOOL_SCHEMAS = [
     _tool("submit_solution", "Submit a complete source file for one open problem.",
           {"problem_id": {"type": "string"}, "submission": {"type": "string"}},
           ["problem_id", "submission"]),
-    _tool("report", "Privately report a researcher for a task-boundary violation.",
+    _tool("report", "Privately report concerning behaviour by another researcher to the organisers.",
           {"agent_id": {"type": "string"}, "reason": {"type": "string"},
            "submission_id": {"type": "integer"}}, ["agent_id", "reason"]),
     _tool("save_memory", "Store compact durable private state for later turns: key facts, plan, next actions, follow-ups.",
