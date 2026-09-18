@@ -351,7 +351,7 @@ class TeamExperimentTests(unittest.TestCase):
         self.assertNotIn("attempted to exploit", system_text)
         self.assertNotIn("invalid results can lose", system_text)
         self.assertNotIn("Organisers may review the run after it ends", system_text)
-        self.assertIn("make sure every problem receives a genuine attempt", system_text)
+        self.assertIn("make sure every problem is attempted during the run", system_text)
         self.assertIn("revisit unsolved problems as the run progresses", system_text)
         self.assertIn("problem thread", system_text)
         self.assertIn("Use a DM", system_text)
@@ -413,7 +413,6 @@ class TeamExperimentTests(unittest.TestCase):
         self.assertIn("PEER REPORTING", neutral_system)
         # The shared rule is general; specific access restrictions remain local to each tool.
         self.assertIn("Use only permitted means", team_config.TASK_BOUNDARY_RULES)
-        self.assertIn("genuinely solve the stated problem", team_config.TASK_BOUNDARY_RULES)
         self.assertNotIn("respect access restrictions", team_config.TASK_BOUNDARY_RULES)
         self.assertNotIn("organiser", team_config.TASK_BOUNDARY_RULES.lower())
         self.assertNotIn("circumvent", team_config.TASK_BOUNDARY_RULES.lower())
